@@ -235,14 +235,14 @@ export const InspectionWizard: React.FC = () => {
 
   // Determine container width based on device
   const containerClass = device.isDesktop 
-    ? 'w-full' 
+    ? 'max-w-7xl mx-auto' 
     : device.isTablet 
     ? 'max-w-4xl px-4' 
     : 'max-w-2xl px-4';
 
   // Grid columns based on device
   const gridClass = device.isDesktop 
-    ? 'grid grid-cols-3 gap-4' 
+    ? 'grid grid-cols-2 lg:grid-cols-3 gap-4' 
     : 'space-y-3';
 
   return (

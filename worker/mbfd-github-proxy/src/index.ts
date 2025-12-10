@@ -29,9 +29,25 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Health check endpoint
+    // Health check endpoint (always accessible)
     if (path === '/health') {
-      return jsonResponse({ status: 'ok', service: 'MBFD GitHub Proxy' });
+      return jsonResponse({ 
+        status: 'ok', 
+        service: 'MBFD GitHub Proxy', 
+        tokenConfigured: !!env.GITHUB_TOKEN 
+      });
+    }
+
+    // Check if GitHub token is configured for all other endpoints
+    if (!env.GITHUB_TOKEN) {
+      console.error('GITHUB_TOKEN environment variable is not set');
+      return jsonResponse(
+        { 
+          error: 'Server configuration error', 
+          message: 'GitHub token not configured. Please set GITHUB_TOKEN in Cloudflare Worker settings.' 
+        },
+        { status: 500 }
+      );
     }
 
     // Check if this is an admin-only endpoint (NOT issue creation)
@@ -103,6 +119,20 @@ async function handleIssuesRequest(
         },
         body: JSON.stringify(body),
       });
+
+      if (!response.ok) {
+        const errorData: any = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('GitHub API Error:', response.status, errorData);
+        return jsonResponse(
+          { 
+            error: 'GitHub API Error',
+            status: response.status,
+            message: errorData.message || response.statusText,
+            details: errorData
+          },
+          { status: response.status }
+        );
+      }
 
       const data = await response.json();
       return jsonResponse(data, { status: response.status });
