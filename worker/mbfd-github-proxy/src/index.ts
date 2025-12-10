@@ -79,10 +79,15 @@ export default {
     }
 
     // Check if this is an admin-only endpoint (NOT issue creation or listing)
+    // Public operations: Creating issues, listing defects for specific apparatus
+    // Admin operations: Listing ALL defects (no apparatus filter), updating/closing issues
+    const labelsParam = url.searchParams.get('labels') || '';
+    const hasApparatusFilter = labelsParam.includes('Rescue') || labelsParam.includes('Engine');
+    
     const isAdminEndpoint = path.includes('/admin/') || 
                             path.includes('/resolve') || 
                             (path.startsWith('/api/issues/') && request.method === 'PATCH') ||
-                            (path.startsWith('/api/issues') && request.method === 'GET' && path === '/api/issues');
+                            (path === '/api/issues' && request.method === 'GET' && !hasApparatusFilter);
     
     if (isAdminEndpoint) {
       // Verify admin password from request header
