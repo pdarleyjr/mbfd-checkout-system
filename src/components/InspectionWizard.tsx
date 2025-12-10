@@ -235,10 +235,15 @@ export const InspectionWizard: React.FC = () => {
 
   // Determine container width based on device
   const containerClass = device.isDesktop 
-    ? 'max-w-7xl' 
+    ? 'w-full px-8' 
     : device.isTablet 
     ? 'max-w-4xl' 
     : 'max-w-2xl';
+
+  // Grid columns based on device
+  const gridClass = device.isDesktop 
+    ? 'grid grid-cols-3 gap-4' 
+    : 'space-y-3';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-24">
@@ -338,7 +343,7 @@ export const InspectionWizard: React.FC = () => {
           </CardHeader>
           <CardContent className="p-4">
             {isOfficerStep ? (
-              <div className={`gap-3 ${device.isDesktop ? 'grid grid-cols-2' : 'space-y-3'}`}>
+              <div className={gridClass}>
                 {officerItems.map((item, idx) => (
                   <OfficerChecklistField
                     key={item.id}
@@ -349,7 +354,7 @@ export const InspectionWizard: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className={`gap-3 ${device.isDesktop ? 'grid grid-cols-2' : 'space-y-3'}`}>
+              <div className={gridClass}>
                 {currentCompartment?.items.map((item) => {
                   const itemName = typeof item === 'string' ? item : item.name;
                   const itemId = `${currentCompartment.id}:${itemName}`;
