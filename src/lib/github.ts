@@ -10,7 +10,7 @@ class GitHubService {
 
   constructor() {
     if (!GITHUB_TOKEN) {
-      throw new Error('GitHub token not configured. Please set VITE_GITHUB_TOKEN in .env.local');
+      throw new Error('GitHub token not configured. Please contact your system administrator.');
     }
 
     this.octokit = new Octokit({
@@ -200,8 +200,8 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 
 ${submission.defects.length > 0 ? `
 ### Issues Reported
-${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}
-` : '✅ All items present and working'}
+${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
+ : '✅ All items present and working'}
 
 ---
 *This inspection log was automatically created by the MBFD Checkout System.*

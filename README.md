@@ -1,219 +1,146 @@
 # MBFD Checkout System
 
-A serverless Progressive Web App (PWA) for Miami Beach Fire Department apparatus daily inspections, built entirely on GitHub Pages with GitHub Issues as the database.
+A serverless Progressive Web App (PWA) for the Miami Beach Fire Department's daily apparatus inspection workflow.
 
-## 🚒 Features
+## 🚀 Live Application
 
-- **Mobile-First Design**: Optimized for tablets and mobile devices
-- **Offline Support**: PWA capabilities for offline access
-- **IssueOps Backend**: Uses GitHub Issues as a database
-- **No External Services**: Completely serverless - runs on GitHub Pages
-- **Real-time Fleet Status**: Admin dashboard showing all apparatus status
-- **Smart Defect Detection**: Automatically detects existing open defects
-- **Email Notifications**: GitHub Actions notify admins of new defects
+**URL:** https://pdarleyjr.github.io/mbfd-checkout-system/
+
+## ✨ Features
+
+- 📱 **Mobile-First PWA** - Installable on iOS/Android devices
+- 🔄 **GitHub Issues Database** - No external database required
+- 🚒 **Multi-Apparatus Support** - Rescue 1, 2, 3, 11, and Engine 1
+- ✅ **Smart Defect Tracking** - Automatic deduplication
+- 📊 **Admin Dashboard** - Fleet status and defect management
+- 🔔 **Email Notifications** - Automatic alerts on new defects
 
 ## 🏗️ Architecture
 
-### Tech Stack
-- **Frontend**: React 18 + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **Routing**: React Router
-- **Data Layer**: GitHub Issues via Octokit REST API
-- **Deployment**: GitHub Pages
-- **Notifications**: GitHub Actions
+**100% Serverless** - Runs entirely on GitHub Pages:
+- **Frontend**: React 18 + TypeScript + Vite
+- **Database**: GitHub Issues (IssueOps pattern)
+- **Backend**: GitHub Actions for automation
+- **Deployment**: Automated via GitHub Actions
+- **Authentication**: Token embedded during build (no user setup required)
 
-### IssueOps Engine
+## 👥 For Users (Firefighters)
 
-The system uses GitHub Issues as a database:
-- **Open Issues with `Defect` label** = Active problems (missing/damaged items)
-- **Closed Issues with `Log` label** = Completed daily inspection history
-- **Comments on Issues** = Verification updates and resolution notes
+**NO SETUP NEEDED!** Just use the app:
 
-## 🚀 Setup Instructions
+1. Visit https://pdarleyjr.github.io/mbfd-checkout-system/
+2. Enter your name
+3. Select your rank (Firefighter, DE, Lieutenant, Captain, Chief)
+4. Select your apparatus (Rescue 1, 2, 3, 11, or Engine 1)
+5. Click "Start Inspection"
+6. Go through each compartment marking items as:
+   - ✅ **Present/Working** (default)
+   - ❌ **Missing** (creates GitHub Issue)
+   - ⚠️ **Damaged** (creates GitHub Issue)
+7. Complete inspection - automatic log entry created
 
-### 1. Create GitHub Repository
+## 🔧 For Administrators
 
-```bash
-# Create a new repository on GitHub at github.com/pdarleyjr/mbfd-checkout-system
-# Make it public (required for GitHub Pages)
-```
+### One-Time Setup Required
 
-### 2. Clone and Install
+The system administrator must configure a GitHub token **ONE TIME** as a repository secret. After that, all users can use the system without any setup.
 
-```bash
-git clone https://github.com/pdarleyjr/mbfd-checkout-system.git
-cd mbfd-checkout-system
-npm install
-```
+**👉 [Read the Complete Setup Guide](./SETUP.md)**
 
-### 3. Configure GitHub Token
-
-1. Go to [GitHub Settings > Tokens](https://github.com/settings/tokens?type=beta)
-2. Create a **Fine-Grained Personal Access Token** with:
-   - **Repository access**: Only this repository
-   - **Permissions**: Issues (Read & Write)
-3. Copy `.env.local.example` to `.env.local`
-4. Add your token:
-
-```bash
-cp .env.local.example .env.local
-# Edit .env.local and add your token
-```
-
-### 4. Local Development
-
-```bash
-npm run dev
-```
-
-Visit `http://localhost:5173`
-
-### 5. Deploy to GitHub Pages
-
-```bash
-# Build and deploy
-npm run deploy
-```
-
-### 6. Enable GitHub Pages
-
-1. Go to repository **Settings > Pages**
-2. Source: Deploy from branch `gh-pages`
-3. Visit: `https://pdarleyjr.github.io/mbfd-checkout-system/`
-
-### 7. Configure Email Notifications (Optional)
-
-1. Go to repository **Settings > Secrets and variables > Actions**
-2. Add secrets:
-   - `MAIL_USERNAME`: Your Gmail address
-   - `MAIL_PASSWORD`: App-specific password
-3. Update the email address in `.github/workflows/notify-admin.yml`
-
-## 📱 Usage
-
-### Daily Inspection Flow
-
-1. **Login**: Enter name, rank, and select apparatus
-2. **Inspection**: Navigate through each compartment
-3. **Mark Status**: 
-   - ✅ Present/Working (default)
-   - ❌ Missing (opens notes modal)
-   - ⚠️ Damaged (opens notes modal)
-4. **Submit**: Creates GitHub Issues for defects + Log entry
+Quick summary:
+1. Create a GitHub Personal Access Token (fine-grained)
+2. Add it as a repository secret named `MBFD_GITHUB_TOKEN`
+3. Push code to trigger deployment
+4. Users can now access the system!
 
 ### Admin Dashboard
 
-- View fleet status at a glance
+Access at: https://pdarleyjr.github.io/mbfd-checkout-system/admin
+
+- View fleet status (all apparatus)
 - See all open defects
-- Resolve defects with resolution notes
-- Automatic issue closing upon resolution
+- Resolve defects with notes
+- Monitor inspection history
 
-## 🔒 Security Notes
+## 🔄 Deployment
 
-**IMPORTANT**: This is a **prototype** for internal use. Client-side tokens are generally not recommended for production. For enhanced security:
+Deployment is **fully automated** via GitHub Actions:
 
-1. Use fine-grained tokens with minimal permissions
-2. Limit token to this repository only
-3. Consider implementing a backend proxy for production use
-4. Never commit `.env.local` to version control
+```bash
+# Any push to main triggers deployment
+git add .
+git commit -m "Update application"
+git push origin main
 
-## 📁 Project Structure
-
-```
-mbfd-checkout-system/
-├── .github/
-│   └── workflows/
-│       └── notify-admin.yml      # Email notifications
-├── public/
-│   ├── data/
-│   │   └── rescue_checklist.json # Apparatus inventory
-│   ├── manifest.json             # PWA manifest
-│   └── sw.js                     # Service worker
-├── src/
-│   ├── components/
-│   │   ├── ui/                   # Reusable UI components
-│   │   ├── AdminDashboard.tsx
-│   │   ├── InspectionCard.tsx
-│   │   ├── InspectionWizard.tsx
-│   │   └── LoginScreen.tsx
-│   ├── lib/
-│   │   ├── github.ts             # GitHub API service
-│   │   └── utils.ts              # Utility functions
-│   ├── types/
-│   │   └── index.ts              # TypeScript types
-│   ├── App.tsx                   # Main app with routing
-│   └── main.tsx                  # Entry point
-├── .env.local.example            # Environment template
-├── package.json
-├── tailwind.config.js
-├── vite.config.ts
-└── README.md
+# Wait 2-3 minutes for Actions to complete
+# Changes are live automatically
 ```
 
-## 🛠️ Customization
+## 🛠️ Development
 
-### Adding New Apparatus
+### Prerequisites
 
-Edit `src/types/index.ts`:
-```typescript
-export type Apparatus = 'Rescue 1' | 'Rescue 2' | 'Your New Truck';
+- Node.js 20+
+- npm or yarn
+- Git
+
+### Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/pdarleyjr/mbfd-checkout-system.git
+cd mbfd-checkout-system
+
+# Install dependencies
+npm install
+
+# Create .env.local with your test token
+echo "VITE_GITHUB_TOKEN=your_token_here" > .env.local
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
 ```
 
-### Modifying Checklist
+### Tech Stack
 
-Edit `public/data/rescue_checklist.json`:
-```json
-{
-  "compartments": [
-    {
-      "id": "new_compartment",
-      "title": "New Compartment",
-      "items": ["Item 1", "Item 2"]
-    }
-  ]
-}
-```
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **Shadcn/UI** - Component library
+- **React Router** - Navigation
+- **Octokit** - GitHub API client
+- **Lucide React** - Icons
 
-## 📊 Data Flow
+## 📋 Checklist Data
 
-```
-User Login → Inspection Wizard → GitHub Issues
-                                      ↓
-                        Open Issues (Defects) ←→ Admin Dashboard
-                                      ↓
-                        Closed Issues (Logs)
-```
+The "Blue Sheet" inventory is stored in [`public/data/rescue_checklist.json`](./public/data/rescue_checklist.json)
 
-## 🐛 Troubleshooting
+To modify the checklist:
+1. Edit the JSON file
+2. Commit and push
+3. Deployment happens automatically
 
-### "GitHub token not configured" error
-- Ensure `.env.local` exists and contains `VITE_GITHUB_TOKEN`
-- Verify token has Issues Read & Write permissions
-- Restart dev server after adding token
+## 🔐 Security
 
-### Issues not appearing
-- Check repository name in `src/lib/github.ts` matches your repo
-- Verify token permissions in GitHub settings
-- Check browser console for API errors
+- Token is embedded in JavaScript bundle (visible to users)
+- Token is **scoped only** to this repository
+- Token has **read/write access only to Issues**
+- Acceptable for internal departmental use
+- For higher security, use a proper backend service
 
-### Deployment issues
-- Ensure GitHub Pages is enabled in repository settings
-- Verify `base` path in `vite.config.ts` matches repo name
-- Check that `gh-pages` branch exists
+## 📞 Support
 
-## 📝 License
+- **Technical Issues**: File an issue on GitHub
+- **Setup Help**: See [SETUP.md](./SETUP.md)
+- **General Questions**: Contact repository administrator
 
-Built for Miami Beach Fire Department. For internal use only.
+## 📄 License
 
-## 🤝 Contributing
-
-This is a department-specific tool. For modifications, contact the IT department.
-
-## 📧 Support
-
-For technical issues, open a GitHub issue or contact the development team.
+Internal use only - Miami Beach Fire Department
 
 ---
 
