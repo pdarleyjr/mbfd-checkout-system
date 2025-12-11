@@ -3,31 +3,31 @@
   "dailySchedule": [
     {
       "day": "Monday",
-      "tasks": []
-    },
-    {
-      "day": "Tuesday",
-      "tasks": []
-    },
-    {
-      "day": "Wednesday",
       "tasks": ["Bunker Gear Check"]
     },
     {
-      "day": "Thursday",
-      "tasks": ["Friday Rock Inventory", "Equipment Deep Check"]
+      "day": "Tuesday",
+      "tasks": ["Stock Inventory / Narcotics Check"]
     },
     {
-      "day": "Friday",
+      "day": "Wednesday",
       "tasks": ["SCBA Complete Checkout"]
     },
     {
+      "day": "Thursday",
+      "tasks": ["Stairchair Inspection & Battery Rotation"]
+    },
+    {
+      "day": "Friday",
+      "tasks": []
+    },
+    {
       "day": "Saturday",
-      "tasks": ["Inventory and Stock Reserves", "Vehicle Compartment(s) Decon"]
+      "tasks": ["Compartment Cleaning", "AIRTRAQ Inspection - Charging"]
     },
     {
       "day": "Sunday",
-      "tasks": ["None"]
+      "tasks": []
     }
   ],
   "officerChecklist": [
