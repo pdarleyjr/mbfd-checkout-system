@@ -120,11 +120,22 @@ export interface GitHubIssue {
   number: number;
   title: string;
   body: string;
-  state: 'open' | 'closed';
   labels: Array<{ name: string }>;
+  state: 'open' | 'closed';
   created_at: string;
   updated_at: string;
-  user?: {
+  user: {
     login: string;
   };
+}
+
+export interface EmailConfig {
+  email_mode: 'daily_digest' | 'per_submission' | 'hybrid';
+  daily_email_hard_cap: number;
+  digest_send_time: string;
+  digest_timezone: string;
+  recipients: string[];
+  enable_immediate_for_critical: boolean;
+  email_subject_template: string;
+  enabled: boolean;
 }

@@ -7,11 +7,25 @@
  * - Origin restriction to prevent unauthorized domains from accessing the API
  * - Token is never exposed to the frontend
  * - Cache optimization for GET requests to reduce API calls
+ * 
+ * NEW: Email notification system with Gmail OAuth integration
  */
+
+import { handleNotify } from './handlers/notify';
+import { handleGetEmailConfig, handleUpdateEmailConfig } from './handlers/config';
+import { handleManualDigest } from './handlers/digest';
+import { sendDailyDigest } from './digest';
 
 interface Env {
   GITHUB_TOKEN: string;
   ADMIN_PASSWORD: string;
+  // Gmail OAuth secrets
+  GMAIL_CLIENT_ID: string;
+  GMAIL_CLIENT_SECRET: string;
+  GMAIL_REFRESH_TOKEN: string;
+  GMAIL_SENDER_EMAIL: string;
+  // KV namespace for configuration and queuing
+  MBFD_CONFIG: KVNamespace;
 }
 
 const REPO_OWNER = 'pdarleyjr';
@@ -40,6 +54,13 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // CORS headers for all responses
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
+    };
+
     // Health check endpoint (always accessible)
     if (path === '/health') {
       return jsonResponse({ 
@@ -47,7 +68,9 @@ export default {
         service: 'MBFD GitHub Proxy', 
         tokenConfigured: !!env.GITHUB_TOKEN,
         adminPasswordConfigured: !!env.ADMIN_PASSWORD,
-        cacheEnabled: true
+        cacheEnabled: true,
+        emailConfigured: !!(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN),
+        kvConfigured: !!env.MBFD_CONFIG
       });
     }
 
@@ -106,6 +129,26 @@ export default {
       }
     }
 
+    // NEW: Notification endpoint
+    if (path === '/api/notify' && request.method === 'POST') {
+      return await handleNotify(request, env, corsHeaders);
+    }
+
+    // NEW: Email configuration endpoints (admin only)
+    if (path === '/api/config/email') {
+      if (request.method === 'GET') {
+        return await handleGetEmailConfig(request, env, corsHeaders);
+      }
+      if (request.method === 'PUT') {
+        return await handleUpdateEmailConfig(request, env, corsHeaders);
+      }
+    }
+
+    // NEW: Manual digest trigger (admin only)
+    if (path === '/api/digest/send' && request.method === 'POST') {
+      return await handleManualDigest(request, env, corsHeaders);
+    }
+
     // Route to appropriate handler
     if (path.startsWith('/api/issues')) {
       return handleIssuesRequest(request, env, url);
@@ -113,6 +156,20 @@ export default {
 
     return jsonResponse({ error: 'Not found' }, { status: 404 });
   },
+
+  // NEW: Cron trigger handler for daily digest
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('Cron trigger fired at:', new Date(event.scheduledTime).toISOString());
+    
+    try {
+      await sendDailyDigest(env);
+      console.log('Daily digest sent successfully');
+    } catch (error) {
+      console.error('Error sending daily digest:', error);
+      // Don't throw - we don't want to mark the cron as failed
+      // The next day's cron will try again
+    }
+  }
 };
 
 async function handleIssuesRequest(

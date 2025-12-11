@@ -1,7 +1,7 @@
-import type { Defect, GitHubIssue, InspectionSubmission } from '../types';
+import type { Defect, GitHubIssue, InspectionSubmission, EmailConfig } from '../types';
 import { APPARATUS_LIST, LABELS, DEFECT_TITLE_REGEX } from './config';
 
-// Cloudflare Worker API endpoint
+// Cloudflare Workers API endpoint
 const API_BASE_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
 
 class GitHubService {
@@ -182,7 +182,7 @@ ${notes}
 
 ---
 *This issue was automatically created by the MBFD Checkout System.*
-    `.trim();
+`.trim();
 
     const labels = [LABELS.DEFECT, apparatus];
     if (status === 'damaged') {
@@ -225,7 +225,7 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 
 ---
 *This comment was automatically added by the MBFD Checkout System.*
-    `.trim();
+`.trim();
 
     try {
       const response = await fetch(`${API_BASE_URL}/issues/${issueNumber}/comments`, {
@@ -264,11 +264,11 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 ${submission.defects.length > 0 ? `
 ### Issues Reported
 ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
- : '✅ All items present and working'}
+ : '✅ All items present and working'}}
 
 ---
 *This inspection log was automatically created by the MBFD Checkout System.*
-    `.trim();
+`.trim();
 
     try {
       const response = await fetch(`${API_BASE_URL}/issues`, {
@@ -406,7 +406,7 @@ ${resolutionNote}
 
 ---
 *This defect was marked as resolved via the MBFD Admin Dashboard.*
-          `.trim(),
+`.trim(),
         }),
       });
 
@@ -625,6 +625,124 @@ ${resolutionNote}
       return lowStockItems;
     } catch (error) {
       console.error('Error analyzing low stock items:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send notification after inspection submission
+   * Queues notification for daily digest or sends immediately based on configuration
+   */
+  async sendNotification(submission: {
+    apparatus: string;
+    operator: string;
+    checklistType: string;
+    totalItems: number;
+    completedItems: number;
+    defects: Array<{
+      item: string;
+      category: string;
+      severity: 'critical' | 'high' | 'medium' | 'low';
+    }>;
+    githubIssueUrl?: string;
+  }): Promise<{ success: boolean; notification_sent: string; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/notify`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(submission),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send notification');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get email configuration (ADMIN ONLY)
+   */
+  async getEmailConfig(adminPassword: string): Promise<EmailConfig> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/email`, {
+        method: 'GET',
+        headers: {
+          'X-Admin-Password': adminPassword,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to fetch email configuration');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching email config:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update email configuration (ADMIN ONLY)
+   */
+  async updateEmailConfig(
+    adminPassword: string,
+    updates: Partial<EmailConfig>
+  ): Promise<{ success: boolean; config: EmailConfig }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/config/email`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': adminPassword,
+        },
+        body: JSON.stringify(updates),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to update email configuration');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error updating email config:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Manually trigger daily digest (ADMIN ONLY)
+   */
+  async sendManualDigest(adminPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/digest/send`, {
+        method: 'POST',
+        headers: {
+          'X-Admin-Password': adminPassword,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized');
+        }
+        throw new Error('Failed to send digest');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error sending manual digest:', error);
       throw error;
     }
   }

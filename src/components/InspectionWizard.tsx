@@ -196,6 +196,44 @@ export const InspectionWizard: React.FC = () => {
         officerChecklist: officerItems,
       });
 
+      // Send notification after successful submission
+      try {
+        const totalItems = items.size;
+        const completedItems = Array.from(items.values()).filter(item => item.status === 'present').length;
+        
+        // Determine checklist type from apparatus
+        let checklistType = 'rescue';
+        if (user.apparatus.startsWith('Engine')) {
+          checklistType = 'engine';
+        } else if (user.apparatus.startsWith('Ladder')) {
+          checklistType = 'ladder';
+        } else if (user.apparatus === 'Rope Inventory') {
+          checklistType = 'rope';
+        }
+        
+        // Map defects to notification format with severity
+        const notificationDefects = defects.map(defect => ({
+          item: defect.item,
+          category: defect.compartment,
+          severity: defect.status === 'missing' ? ('critical' as const) : ('high' as const)
+        }));
+        
+        await githubService.sendNotification({
+          apparatus: user.apparatus,
+          operator: user.name,
+          checklistType,
+          totalItems,
+          completedItems,
+          defects: notificationDefects,
+          githubIssueUrl: undefined // Issue URL not available from submitChecklist
+        });
+        
+        console.log('Notification queued/sent successfully');
+      } catch (notifyError) {
+        // Log but don't fail the entire submission if notification fails
+        console.error('Failed to send notification (non-critical):', notifyError);
+      }
+
       // Clear session and show success modal
       sessionStorage.removeItem('user');
       setSubmissionDefectCount(defects.length);

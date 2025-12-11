@@ -16,6 +16,20 @@
 	},
 	"observability": {
 		"enabled": true
+	},
+	
+	// KV namespace for email configuration and notification queuing
+	"kv_namespaces": [
+		{
+			"binding": "MBFD_CONFIG",
+			"id": "a025d543428c447f87e8a4854740e860"
+		}
+	],
+	
+	// Cron trigger for daily digest at 12:00 PM Pacific (20:00 UTC in winter, 19:00 UTC in summer)
+	// Note: Adjusting for Pacific Standard Time (UTC-8)
+	"triggers": {
+		"crons": ["0 20 * * *"]
 	}
 	/**
 	 * Smart Placement

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
-import type { Defect } from '../types';
+import type { Defect, EmailConfig } from '../types';
 
-type TabType = 'fleet' | 'activity' | 'supplies';
+type TabType = 'fleet' | 'activity' | 'supplies' | 'notifications';
 
 interface DailySubmissions {
   today: string[];
@@ -39,6 +39,12 @@ export const AdminDashboard: React.FC = () => {
   const [resolutionNote, setResolutionNote] = useState('');
   const [isResolving, setIsResolving] = useState(false);
   const [showResolveSuccess, setShowResolveSuccess] = useState(false);
+
+  // Email notification state
+  const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
 
   const handlePasswordSubmit = async () => {
     if (!passwordInput.trim()) {
@@ -147,6 +153,52 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const loadEmailConfig = async () => {
+    if (!passwordInput) return;
+    
+    setIsLoadingConfig(true);
+    setConfigError(null);
+    
+    try {
+      const config = await githubService.getEmailConfig(passwordInput);
+      setEmailConfig(config);
+    } catch (error) {
+      setConfigError(error instanceof Error ? error.message : 'Failed to load email configuration');
+    } finally {
+      setIsLoadingConfig(false);
+    }
+  };
+
+  const saveEmailConfig = async (updates: Partial<EmailConfig>) => {
+    if (!passwordInput || !emailConfig) return;
+    
+    setIsSavingConfig(true);
+    setConfigError(null);
+    
+    try {
+      const result = await githubService.updateEmailConfig(passwordInput, updates);
+      setEmailConfig(result.config);
+      alert('Email configuration updated successfully');
+    } catch (error) {
+      setConfigError(error instanceof Error ? error.message : 'Failed to update email configuration');
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  const sendTestDigest = async () => {
+    if (!passwordInput) return;
+    
+    if (!confirm('Send a test daily digest email now?')) return;
+    
+    try {
+      await githubService.sendManualDigest(passwordInput);
+      alert('Test digest sent successfully! Check your email.');
+    } catch (error) {
+      alert('Failed to send test digest: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   // Auto-refresh data every 2 minutes when authenticated
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -186,7 +238,7 @@ export const AdminDashboard: React.FC = () => {
                   onChange={(e) => {
                     setPasswordInput(e.target.value);
                     setPasswordError('');
-                  }}
+      }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handlePasswordSubmit();
@@ -305,6 +357,20 @@ export const AdminDashboard: React.FC = () => {
                   {lowStockItems.length}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('notifications');
+                if (!emailConfig) loadEmailConfig();
+              }}
+              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
+                activeTab === 'notifications'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Mail className="w-5 h-5" />
+              Notifications
             </button>
           </div>
         </div>
@@ -561,6 +627,241 @@ export const AdminDashboard: React.FC = () => {
                   </Card>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Email Notifications</h2>
+              <Button
+                onClick={sendTestDigest}
+                variant="secondary"
+                className="flex items-center gap-2"
+              >
+                <Mail className="w-5 h-5" />
+                Send Test Digest
+              </Button>
+            </div>
+
+            {configError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                {configError}
+              </div>
+            )}
+
+            {isLoadingConfig ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+                <p className="text-gray-600">Loading configuration...</p>
+              </div>
+            ) : emailConfig ? (
+              <div className="space-y-6">
+                {/* Master Enable/Disable */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Email Notifications</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {emailConfig.enabled ? 'Notifications are currently enabled' : 'Notifications are currently disabled'}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => saveEmailConfig({ enabled: !emailConfig.enabled })}
+                        className={emailConfig.enabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+                        disabled={isSavingConfig}
+                      >
+                        {emailConfig.enabled ? 'Disable' : 'Enable'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Email Mode */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Mode</h3>
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input
+                          type="radio"
+                          name="email_mode"
+                          value="daily_digest"
+                          checked={emailConfig.email_mode === 'daily_digest'}
+                          onChange={(e) => saveEmailConfig({ email_mode: e.target.value as any })}
+                          className="mt-1 w-5 h-5 text-blue-600"
+                        />
+                        <div>
+                          <span className="font-semibold">Daily Digest (Recommended)</span>
+                          <p className="text-sm text-gray-600">Send one summary email per day at {emailConfig.digest_send_time}</p>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input
+                          type="radio"
+                          name="email_mode"
+                          value="per_submission"
+                          checked={emailConfig.email_mode === 'per_submission'}
+                          onChange={(e) => saveEmailConfig({ email_mode: e.target.value as any })}
+                          className="mt-1 w-5 h-5 text-blue-600"
+                        />
+                        <div>
+                          <span className="font-semibold">Per Submission</span>
+                          <p className="text-sm text-gray-600">Send an email immediately after each inspection</p>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                        <input
+                          type="radio"
+                          name="email_mode"
+                          value="hybrid"
+                          checked={emailConfig.email_mode === 'hybrid'}
+                          onChange={(e) => saveEmailConfig({ email_mode: e.target.value as any })}
+                          className="mt-1 w-5 h-5 text-blue-600"
+                        />
+                        <div>
+                          <span className="font-semibold">Hybrid</span>
+                          <p className="text-sm text-gray-600">Immediate for critical defects, daily digest for routine</p>
+                        </div>
+                      </label>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recipients */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Recipients</h3>
+                    <div className="space-y-3">
+                      {emailConfig.recipients.map((email, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => {
+                              const newRecipients = [...emailConfig.recipients];
+                              newRecipients[idx] = e.target.value;
+                              setEmailConfig({ ...emailConfig, recipients: newRecipients });
+                            }}
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="email@example.com"
+                          />
+                          <Button
+                            onClick={() => {
+                              const newRecipients = emailConfig.recipients.filter((_, i) => i !== idx);
+                              saveEmailConfig({ recipients: newRecipients });
+                            }}
+                            variant="secondary"
+                            className="bg-red-50 hover:bg-red-100 text-red-700"
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            const newRecipients = [...emailConfig.recipients, ''];
+                            setEmailConfig({ ...emailConfig, recipients: newRecipients });
+                          }}
+                          variant="secondary"
+                        >
+                          + Add Recipient
+                        </Button>
+                        <Button
+                          onClick={() => saveEmailConfig({ recipients: emailConfig.recipients.filter(email => email !== '') })}
+                          disabled={isSavingConfig}
+                        >
+                          Save Recipients
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Critical Defect Alert */}
+                <Card>
+                  <CardContent className="p-6">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={emailConfig.enable_immediate_for_critical}
+                        onChange={(e) => saveEmailConfig({ enable_immediate_for_critical: e.target.checked })}
+                        className="mt-1 w-5 h-5 text-blue-600 rounded"
+                      />
+                      <div>
+                        <span className="font-semibold text-gray-900">Immediate Alerts for Critical Defects</span>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Send immediate email when critical defects are found (only in hybrid mode)
+                        </p>
+                      </div>
+                    </label>
+                  </CardContent>
+                </Card>
+
+                {/* Daily Email Limit */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Email Limit</h3>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="number"
+                        value={emailConfig.daily_email_hard_cap}
+                        onChange={(e) => setEmailConfig({ ...emailConfig, daily_email_hard_cap: parseInt(e.target.value) || 250 })}
+                        className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        min="1"
+                        max="500"
+                      />
+                      <span className="text-gray-600">emails per day (max: 500)</span>
+                      <Button
+                        onClick={() => saveEmailConfig({ daily_email_hard_cap: emailConfig.daily_email_hard_cap })}
+                        disabled={isSavingConfig}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Current: {emailConfig.daily_email_hard_cap} / Recommended: 250
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Email Subject Template */}
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Subject Template</h3>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={emailConfig.email_subject_template}
+                        onChange={(e) => setEmailConfig({ ...emailConfig, email_subject_template: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="MBFD Daily Inspection Summary - {date}"
+                      />
+                      <p className="text-sm text-gray-500">Use {'{date}'} for the current date</p>
+                      <Button
+                        onClick={() => saveEmailConfig({ email_subject_template: emailConfig.email_subject_template })}
+                        disabled={isSavingConfig}
+                      >
+                        Save Template
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">Click the button below to load email configuration</p>
+                  <Button onClick={loadEmailConfig}>
+                    Load Configuration
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}

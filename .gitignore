@@ -33,3 +33,7 @@ dist/
 
 # GitHub Pages
 .gh-pages
+
+# Implementation guides with secrets (DO NOT COMMIT)
+IMPLEMENTATION_GUIDE.md
+AI_CODING_AGENT_INSTRUCTIONS.md
