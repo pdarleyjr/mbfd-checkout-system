@@ -62,8 +62,10 @@ export interface ChecklistData {
 // Fixed apparatus casing to match UI usage
 export type Apparatus = 
   | 'Engine 1' | 'Engine 2' | 'Engine 3' | 'Engine 4'
+  | 'Ladder 1' | 'Ladder 3'
   | 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 4'
-  | 'Rescue 11' | 'Rescue 22' | 'Rescue 44';
+  | 'Rescue 11' | 'Rescue 22' | 'Rescue 44'
+  | 'Rope Inventory';
 export type ItemStatus = 'present' | 'missing' | 'damaged';
 export type Rank = 'Firefighter' | 'DE' | 'Lieutenant' | 'Captain' | 'Chief';
 export type Shift = 'A' | 'B' | 'C';

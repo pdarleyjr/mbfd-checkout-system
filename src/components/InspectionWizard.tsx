@@ -45,8 +45,20 @@ export const InspectionWizard: React.FC = () => {
   const loadChecklistData = async (userData: User) => {
     try {
       // Determine which checklist to load based on apparatus type
-      const isEngine = userData.apparatus.startsWith('Engine');
-      const checklistFile = isEngine ? 'engine_checklist.json' : 'rescue_checklist.json';
+      let checklistFile: string;
+      
+      if (userData.apparatus.startsWith('Engine')) {
+        checklistFile = 'engine_checklist.json';
+      } else if (userData.apparatus === 'Ladder 1') {
+        checklistFile = 'ladder1_checklist.json';
+      } else if (userData.apparatus === 'Ladder 3') {
+        checklistFile = 'ladder3_checklist.json';
+      } else if (userData.apparatus === 'Rope Inventory') {
+        checklistFile = 'rope_checklist.json';
+      } else {
+        // All Rescue units use the same checklist
+        checklistFile = 'rescue_checklist.json';
+      }
       
       // Load checklist JSON
       const response = await fetch(`/mbfd-checkout-system/data/${checklistFile}`);
