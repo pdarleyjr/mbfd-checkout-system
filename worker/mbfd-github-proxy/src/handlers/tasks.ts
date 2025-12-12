@@ -46,7 +46,7 @@ async function findInventoryMatches(
 ): Promise<SuggestedReplacement[]> {
   try {
     // Read inventory from Google Sheet
-    const values = await readSheet(env, env.GOOGLE_SHEET_ID, 'Inventory!A2:I1000');
+    const values = await readSheet(env, env.GOOGLE_SHEET_ID, 'Sheet1!A2:I1000');
     
     // Normalize search term
     const normalized = normalizeString(itemName);
@@ -126,12 +126,127 @@ export async function handleCreateTasks(
         deficiencyType: 'missing' | 'damaged';
         createdBy?: string;
         notes?: string;
-      }>;
+      }>
     } = await request.json();
 
     if (!body.tasks || !Array.isArray(body.tasks)) {
       return new Response(
         JSON.stringify({ error: 'Invalid request: tasks array required' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    // INPUT VALIDATION: Validate each task structure
+    for (let i = 0; i < body.tasks.length; i++) {
+      const task = body.tasks[i];
+      
+      // Validate required fields
+      if (!task.apparatus || typeof task.apparatus !== 'string') {
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid task at index ${i}: apparatus is required and must be a string` 
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+
+      if (!task.item || typeof task.item !== 'string') {
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid task at index ${i}: item is required and must be a string` 
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+
+      if (task.deficiencyType !== 'missing' && task.deficiencyType !== 'damaged') {
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid task at index ${i}: deficiencyType must be 'missing' or 'damaged'` 
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+
+      // Validate string lengths to prevent abuse
+      if (task.apparatus.length > 100) {
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid task at index ${i}: apparatus name too long (max 100 characters)` 
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+
+      if (task.item.length > 200) {
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid task at index ${i}: item name too long (max 200 characters)` 
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+
+      if (task.notes && task.notes.length > 1000) {
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid task at index ${i}: notes too long (max 1000 characters)` 
+          }),
+          {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+    }
+
+    // Limit number of tasks per request
+    const MAX_TASKS_PER_REQUEST = 50;
+    if (body.tasks.length > MAX_TASKS_PER_REQUEST) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Too many tasks in single request. Maximum allowed: ${MAX_TASKS_PER_REQUEST}`,
+          requestedCount: body.tasks.length
+        }),
         {
           status: 400,
           headers: {

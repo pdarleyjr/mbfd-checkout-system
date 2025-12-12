@@ -264,7 +264,7 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 ${submission.defects.length > 0 ? `
 ### Issues Reported
 ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
- : '✅ All items present and working'}}
+ : '✅ All items present and working'}
 
 ---
 *This inspection log was automatically created by the MBFD Checkout System.*
@@ -288,11 +288,35 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
       const issue = await response.json();
 
       // Immediately close the issue to mark it as a log entry
-      await fetch(`${API_BASE_URL}/issues/${issue.number}`, {
+      const closeResponse = await fetch(`${API_BASE_URL}/issues/${issue.number}`, {
         method: 'PATCH',
         headers: this.getHeaders(),
         body: JSON.stringify({ state: 'closed' }),
       });
+
+      if (!closeResponse.ok) {
+        // Log detailed error information for debugging
+        const errorText = await closeResponse.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { message: errorText };
+        }
+        
+        console.error(`Failed to close log issue #${issue.number}:`, {
+          status: closeResponse.status,
+          statusText: closeResponse.statusText,
+          error: errorData,
+          message: errorData.message || 'Unknown error'
+        });
+        
+        // Don't throw - log was created successfully, just not closed
+        // The workaround of querying 'state=all' handles this
+        console.warn(`Log entry created as issue #${issue.number} but could not be closed. It may require manual closure or token permissions review.`);
+      } else {
+        console.log(`Successfully created and closed log issue #${issue.number}`);
+      }
     } catch (error) {
       console.error('Error creating log entry:', error);
       throw error;

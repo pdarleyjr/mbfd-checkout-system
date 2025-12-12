@@ -153,6 +153,39 @@ export async function handleAdjustInventory(
       );
     }
 
+    // INPUT VALIDATION: Limit delta to prevent abuse or accidental large changes
+    const MAX_DELTA = 100;
+    if (Math.abs(body.delta) > MAX_DELTA) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Delta too large. Maximum allowed adjustment is ±${MAX_DELTA}`,
+          requestedDelta: body.delta,
+          maxAllowed: MAX_DELTA
+        }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
+    // Validate delta is not zero
+    if (body.delta === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Delta cannot be zero' }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
     // Extract row number from itemId (format: item_1, item_2, etc.)
     const rowMatch = body.itemId.match(/item_(\d+)/);
     if (!rowMatch) {

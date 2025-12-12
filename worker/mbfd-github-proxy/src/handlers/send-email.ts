@@ -14,6 +14,21 @@ export async function handleSendEmail(
   corsHeaders: Record<string, string>
 ): Promise<Response> {
   try {
+    // SECURITY: Verify admin authentication
+    const password = request.headers.get('X-Admin-Password');
+    if (password !== env.ADMIN_PASSWORD) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Unauthorized. Invalid admin password.'
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     // Parse request body
     const emailRequest: SendEmailRequest = await request.json();
 

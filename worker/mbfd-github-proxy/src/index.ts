@@ -9,6 +9,18 @@
  * - Cache optimization for GET requests to reduce API calls
  * 
  * NEW: Email notification system with Gmail OAuth integration
+ * 
+ * RATE LIMITING STRATEGY:
+ * - Cloudflare Workers provides built-in DDoS protection at the edge
+ * - Origin restriction limits abuse to authorized domain only
+ * - Admin endpoints require password authentication
+ * - Future enhancement: Implement custom rate limiting using KV namespace:
+ *   * Track requests per IP/endpoint using KV with TTL
+ *   * Example: 100 requests per minute per endpoint
+ *   * Use CF-Connecting-IP header for client identification
+ *   * Implement exponential backoff for repeated violations
+ * - GitHub API has its own rate limiting (5000 req/hr for authenticated)
+ * - Cache layer reduces GitHub API calls significantly
  */
 
 import { handleNotify } from './handlers/notify';
@@ -343,7 +355,65 @@ async function handleIssuesRequest(
 
     // Create issue (no caching for POST)
     if (request.method === 'POST' && path === '') {
-      const body = await request.json();
+      const body: any = await request.json();
+      
+      // INPUT VALIDATION: Validate required fields and sanitize inputs
+      if (!body.title || typeof body.title !== 'string') {
+        return jsonResponse(
+          { error: 'Invalid request: title is required and must be a string' },
+          { status: 400 }
+        );
+      }
+
+      // Validate title length
+      if (body.title.length > 256) {
+        return jsonResponse(
+          { error: 'Invalid request: title too long (max 256 characters)' },
+          { status: 400 }
+        );
+      }
+
+      // Validate body if provided
+      if (body.body !== undefined && typeof body.body !== 'string') {
+        return jsonResponse(
+          { error: 'Invalid request: body must be a string' },
+          { status: 400 }
+        );
+      }
+
+      // Validate body length
+      if (body.body && body.body.length > 65536) {
+        return jsonResponse(
+          { error: 'Invalid request: body too long (max 65536 characters)' },
+          { status: 400 }
+        );
+      }
+
+      // Validate labels if provided
+      if (body.labels !== undefined) {
+        if (!Array.isArray(body.labels)) {
+          return jsonResponse(
+            { error: 'Invalid request: labels must be an array' },
+            { status: 400 }
+          );
+        }
+        
+        if (body.labels.length > 100) {
+          return jsonResponse(
+            { error: 'Invalid request: too many labels (max 100)' },
+            { status: 400 }
+          );
+        }
+
+        for (const label of body.labels) {
+          if (typeof label !== 'string' || label.length > 50) {
+            return jsonResponse(
+              { error: 'Invalid request: each label must be a string (max 50 characters)' },
+              { status: 400 }
+            );
+          }
+        }
+      }
       
       const githubUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues`;
       
