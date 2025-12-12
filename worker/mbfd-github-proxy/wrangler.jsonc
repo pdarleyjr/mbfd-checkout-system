@@ -35,10 +35,10 @@
 		}
 	],
 	
-	// Cron trigger for daily digest at 12:00 PM Pacific (20:00 UTC in winter, 19:00 UTC in summer)
-	// Note: Adjusting for Pacific Standard Time (UTC-8)
+	// Cron trigger for daily digest at 12:00 PM Eastern (17:00 UTC)
+	// Note: Eastern Standard Time is UTC-5
 	"triggers": {
-		"crons": ["0 20 * * *"]
+		"crons": ["0 17 * * *"]
 	},
 	"ai": {
 		"binding": "AI"
