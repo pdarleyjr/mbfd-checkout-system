@@ -18,6 +18,64 @@ function verifyAdminPassword(request: Request, env: Env): boolean {
   return providedPassword === env.ADMIN_PASSWORD;
 }
 
+/**
+ * Rate limiting helper: Check if we can run analysis based on cache
+ * Prevents continuous execution - only allows once per 5 minutes per unique query
+ */
+async function checkRateLimit(
+  env: Env,
+  timeframe: string,
+  apparatus: string | null
+): Promise<{ allowed: boolean; cachedResult?: any; cacheAge?: number }> {
+  const cacheKey = `ai_analysis:${timeframe}:${apparatus || 'all'}`;
+  
+  try {
+    const cached = await env.MBFD_CONFIG.get(cacheKey, 'json');
+    
+    if (cached) {
+      const cacheAge = Date.now() - (cached as any).timestamp;
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      
+      if (cacheAge < FIVE_MINUTES) {
+        console.log(`Rate limit: returning cached analysis (${Math.round(cacheAge / 1000)}s old)`);
+        return { 
+          allowed: false, 
+          cachedResult: (cached as any).result,
+          cacheAge: Math.round(cacheAge / 1000)
+        };
+      }
+    }
+    
+    return { allowed: true };
+  } catch (error) {
+    console.error('Rate limit check error:', error);
+    return { allowed: true }; // Allow on error
+  }
+}
+
+/**
+ * Store analysis result in cache
+ */
+async function cacheAnalysisResult(
+  env: Env,
+  timeframe: string,
+  apparatus: string | null,
+  result: any
+): Promise<void> {
+  const cacheKey = `ai_analysis:${timeframe}:${apparatus || 'all'}`;
+  
+  try {
+    await env.MBFD_CONFIG.put(cacheKey, JSON.stringify({
+      timestamp: Date.now(),
+      result
+    }), {
+      expirationTtl: 3600 // 1 hour TTL
+    });
+  } catch (error) {
+    console.error('Failed to cache analysis:', error);
+  }
+}
+
 export async function handleAnalyze(
   request: Request,
   env: Env,
@@ -52,17 +110,43 @@ export async function handleAnalyze(
     const url = new URL(request.url);
     const timeframe = url.searchParams.get('timeframe') || 'week';
     const apparatus = url.searchParams.get('apparatus') || null;
+    const forceRefresh = url.searchParams.get('force') === 'true';
+
+    // Check rate limit (unless force refresh requested)
+    if (!forceRefresh) {
+      const rateLimitCheck = await checkRateLimit(env, timeframe, apparatus);
+      
+      if (!rateLimitCheck.allowed && rateLimitCheck.cachedResult) {
+        console.log('Returning cached AI analysis to prevent excessive API calls');
+        return new Response(
+          JSON.stringify({
+            ...rateLimitCheck.cachedResult,
+            cached: true,
+            cacheAge: rateLimitCheck.cacheAge
+          }),
+          { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
 
     // Fetch inspection data from GitHub Issues
     const inspectionData = await fetchInspectionData(env, timeframe, apparatus);
 
     if (inspectionData.length === 0) {
+      const result = { 
+        insights: [],
+        message: 'No inspection data available for analysis',
+        dataPoints: 0
+      };
+      
+      // Cache even empty results
+      await cacheAnalysisResult(env, timeframe, apparatus, result);
+      
       return new Response(
-        JSON.stringify({ 
-          insights: [],
-          message: 'No inspection data available for analysis',
-          dataPoints: 0
-        }),
+        JSON.stringify(result),
         { 
           status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -72,15 +156,20 @@ export async function handleAnalyze(
 
     // Generate AI analysis
     const insights = await analyzeWithAI(env, inspectionData);
+    
+    const result = { 
+      insights,
+      dataPoints: inspectionData.length,
+      timeframe,
+      apparatus: apparatus || 'all',
+      generatedAt: new Date().toISOString()
+    };
+
+    // Cache the result
+    await cacheAnalysisResult(env, timeframe, apparatus, result);
 
     return new Response(
-      JSON.stringify({ 
-        insights,
-        dataPoints: inspectionData.length,
-        timeframe,
-        apparatus: apparatus || 'all',
-        generatedAt: new Date().toISOString()
-      }),
+      JSON.stringify(result),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -95,6 +95,7 @@ class GitHubService {
    * Submit a checklist inspection
    * Creates new issues for new defects, adds comments to existing ones
    * Implements robust error handling: attempts all defects even if some fail
+   * NEW: Automatically creates supply tasks for defects to cross-match with inventory
    */
   async submitChecklist(submission: InspectionSubmission): Promise<void> {
     const { user, apparatus, date, defects } = submission;
@@ -151,8 +152,61 @@ class GitHubService {
       throw new Error(`Failed to submit ${defectErrors} defect(s): ${errorMessages.join(', ')}. Please try again.`);
     }
 
+    // NEW: Create supply tasks for inventory cross-matching
+    try {
+      await this.createSupplyTasksForDefects(defects, apparatus, user.name);
+    } catch (error) {
+      console.error('Failed to create supply tasks (non-blocking):', error);
+      // Don't throw - supply task creation failure shouldn't block inspection submission
+    }
+
     // Create a log entry (closed issue) for the completed inspection
     await this.createLogEntry(submission);
+  }
+
+  /**
+   * NEW: Create supply tasks for defects to enable inventory cross-matching
+   * This triggers the system to check Google Sheets for available replacements
+   */
+  private async createSupplyTasksForDefects(
+    defects: Array<{
+      compartment: string;
+      item: string;
+      status: 'missing' | 'damaged';
+      notes: string;
+      photoUrl?: string;
+    }>,
+    apparatus: string,
+    createdBy: string
+  ): Promise<void> {
+    if (defects.length === 0) return;
+
+    const tasks = defects.map(defect => ({
+      apparatus,
+      compartment: defect.compartment,
+      item: defect.item,
+      deficiencyType: defect.status as 'missing' | 'damaged',
+      createdBy,
+      notes: defect.notes || undefined
+    }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/tasks`, {
+        method: 'POST',
+        headers: this.getHeaders(false), // Don't require admin for task creation
+        body: JSON.stringify({ tasks }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`Created ${result.tasks?.length || 0} supply tasks for inventory cross-matching`);
+      } else {
+        console.warn('Supply task creation returned non-OK status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error creating supply tasks:', error);
+      // Non-blocking - don't throw
+    }
   }
 
   /**
@@ -307,8 +361,8 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 
 ${submission.defects.length > 0 ? `
 ### Issues Reported
-${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}}`
- : '✅ All items present and working'}
+${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
+ : '✅ All items present and working'}`
 `;
 
     // Add receipt link or fallback markdown
@@ -482,8 +536,8 @@ ${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'm
 ${resolutionNote}
 
 ---
-*This defect was marked as resolved via the MBFD Admin Dashboard.*
-`.trim(),
+*This defect was marked as resolved via the MBFD Admin Dashboard.*`
+        .trim(),
         }),
       });
 

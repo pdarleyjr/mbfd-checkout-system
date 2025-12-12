@@ -62,13 +62,6 @@ export const AIFleetInsights: React.FC<AIFleetInsightsProps> = ({ adminPassword,
     }
   };
 
-  // Auto-load insights on mount and when filters change
-  useEffect(() => {
-    if (adminPassword) {
-      loadAIInsights();
-    }
-  }, [selectedTimeframe, selectedApparatus, adminPassword]);
-
   const renderInsightCard = (insight: string, index: number) => {
     const isCritical = insight.toLowerCase().includes('critical') || insight.toLowerCase().includes('urgent');
     const isWarning = insight.toLowerCase().includes('warning') || insight.toLowerCase().includes('attention');
@@ -189,6 +182,9 @@ export const AIFleetInsights: React.FC<AIFleetInsightsProps> = ({ adminPassword,
               <Brain className="w-5 h-5" />
               {isLoadingInsights ? 'Analyzing Fleet...' : 'Analyze Fleet'}
             </Button>
+            <p className="text-xs text-gray-500 mt-2">
+              Click "Analyze Fleet" to generate insights. Analysis is rate-limited to once per 5 minutes per configuration to conserve AI resources.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -247,12 +243,12 @@ export const AIFleetInsights: React.FC<AIFleetInsightsProps> = ({ adminPassword,
         <Card>
           <CardContent className="py-12 text-center">
             <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-gray-900 mb-2">No Analysis Data</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Ready to Analyze</h3>
             <p className="text-gray-600 mb-4">
-              No inspection data available for this timeframe.
+              Select your filters above and click "Analyze Fleet" to generate AI insights.
             </p>
             <p className="text-sm text-gray-500">
-              Try expanding the timeframe or checking other apparatus.
+              AI analysis reviews inspection logs and identifies patterns, trends, and actionable recommendations.
             </p>
           </CardContent>
         </Card>
