@@ -42,7 +42,7 @@
 	},
 	"ai": {
 		"binding": "AI"
-	}
+	},
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
@@ -73,4 +73,10 @@
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 */
 	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+	
+	// Environment variables (non-sensitive)
+	"vars": {
+		"MBFD_HOSTNAME": "https://mbfd-github-proxy.pdarleyjr.workers.dev",
+		"RECEIPT_TTL_DAYS": "90"
+	}
 }
