@@ -177,9 +177,9 @@
       "id": "radio_numbers",
       "title": "Radio Numbers",
       "items": [
-        { "name": "Radio #s - R. Lt.", "inputType": "text" },
-        { "name": "Radio #s - F1A", "inputType": "text" },
-        { "name": "Radio #s - F1B", "inputType": "text" }
+        { "name": "Radio - R. Lt.", "inputType": "radio", "note": "Check accounted for and enter radio number if known" },
+        { "name": "Radio - F1A", "inputType": "radio", "note": "Check accounted for and enter radio number if known" },
+        { "name": "Radio - F1B", "inputType": "radio", "note": "Check accounted for and enter radio number if known" }
       ]
     }
   ]
