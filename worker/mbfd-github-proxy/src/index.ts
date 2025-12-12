@@ -18,6 +18,7 @@ import { handleAnalyze } from './handlers/analyze';
 import { handleGetInventory, handleAdjustInventory } from './handlers/inventory';
 import { handleCreateTasks, handleGetTasks, handleUpdateTask } from './handlers/tasks';
 import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
+import { handleSendEmail } from './handlers/send-email';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -143,6 +144,11 @@ export default {
     // NEW: Notification endpoint
     if (path === '/api/notify' && request.method === 'POST') {
       return await handleNotify(request, env, corsHeaders);
+    }
+
+    // NEW: Send email endpoint
+    if (path === '/api/send-email' && request.method === 'POST') {
+      return await handleSendEmail(request, env, corsHeaders);
     }
 
     // NEW: Email configuration endpoints (admin only)
