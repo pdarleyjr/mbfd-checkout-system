@@ -60,7 +60,7 @@ export async function handleGetInventory(
 
     // Read inventory from Google Sheet
     // Assuming the sheet has columns: Shelf, Row, Equipment Type, Equipment Name, Quantity, Manufacturer, Location, Description, Min Qty
-    const values = await readSheet(env, env.GOOGLE_SHEET_ID, 'MBFD_supply_inventory!A2:H1000');
+    const values = await readSheet(env, env.GOOGLE_SHEET_ID, 'Sheet1!A2:H1000');
 
     // Transform sheet data into inventory items
     const items: InventoryItem[] = values.map((row, index) => ({
@@ -174,7 +174,7 @@ export async function handleAdjustInventory(
     const values = await readSheet(
       env,
       env.GOOGLE_SHEET_ID,
-      `MBFD_supply_inventory!E${rowNumber}`
+      `Sheet1!E${rowNumber}`
     );
 
     if (!values || values.length === 0) {
@@ -213,7 +213,7 @@ export async function handleAdjustInventory(
     await writeSheet(
       env,
       env.GOOGLE_SHEET_ID,
-      `MBFD_supply_inventory!E${rowNumber}`,
+      `Sheet1!E${rowNumber}`,
       [[newQty]]
     );
 
