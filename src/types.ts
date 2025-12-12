@@ -94,6 +94,7 @@ export interface Defect {
   reportedBy: string;
   reportedAt: string;
   photoUrl?: string;
+  thumbnailUrl?: string;
   resolved: boolean;
   issueNumber?: number;
   updatedAt?: string;
@@ -140,4 +141,36 @@ export interface EmailConfig {
   enable_immediate_for_critical: boolean;
   email_subject_template: string;
   enabled: boolean;
+}
+
+// Photo Upload Response
+export interface UploadResponse {
+  success: boolean;
+  photoUrl?: string;
+  thumbnailUrl?: string;
+  key?: string;
+  size?: number;
+  mimeType?: string;
+  error?: string;
+  message?: string;
+}
+
+// Pending Upload for offline support
+export interface PendingUpload {
+  id: string;
+  file: Blob;
+  metadata: {
+    inspector: string;
+    apparatus: string;
+    item: string;
+    reportedAt: string;
+  };
+  defect: {
+    compartment: string;
+    item: string;
+    status: 'missing' | 'damaged';
+    notes: string;
+  };
+  timestamp: number;
+  retryCount: number;
 }

@@ -32,6 +32,7 @@ import { handleCreateTasks, handleGetTasks, handleUpdateTask } from './handlers/
 import { handleAIInsights, handleGetInsights } from './handlers/ai-insights';
 import { handleSendEmail } from './handlers/send-email';
 import { handleCreateReceipt, handleGetReceipt } from './handlers/receipts';
+import { handleImageUpload, handleImageRetrieval } from './handlers/uploads';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -47,6 +48,8 @@ export interface Env {
   GOOGLE_SHEET_ID: string;
   // KV namespace for configuration and queuing
   MBFD_CONFIG: KVNamespace;
+  // KV namespace for image uploads
+  MBFD_UPLOADS: KVNamespace;
   // D1 database for task storage
   SUPPLY_DB?: D1Database;
   // AI binding (optional)
@@ -233,6 +236,18 @@ export default {
       return await handleGetReceipt(request, env, receiptId);
     }
 
+    // NEW: Image upload endpoints
+    if (path === '/api/uploads' && request.method === 'POST') {
+      return await handleImageUpload(request, env, corsHeaders);
+    }
+
+    // Image retrieval endpoint - extract key from path
+    const imageMatch = path.match(/^\/api\/uploads\/(.+)$/);
+    if (imageMatch && request.method === 'GET') {
+      const key = imageMatch[1];
+      return await handleImageRetrieval(request, env, key);
+    }
+
     // Route to appropriate handler
     if (path.startsWith('/api/issues')) {
       return handleIssuesRequest(request, env, url);
@@ -250,8 +265,8 @@ export default {
       console.log('Daily digest sent successfully');
     } catch (error) {
       console.error('Error sending daily digest:', error);
-      // Don't throw - we don't want to mark the cron as failed
-      // The next day's cron will try again
+      // Don’t throw - we don’t want to mark the cron as failed
+      // The next day’s cron will try again
     }
   }
 };

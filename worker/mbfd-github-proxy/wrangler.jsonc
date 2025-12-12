@@ -23,6 +23,10 @@
 		{
 			"binding": "MBFD_CONFIG",
 			"id": "a025d543428c447f87e8a4854740e860"
+		},
+		{
+			"binding": "MBFD_UPLOADS",
+			"id": "8c4f7aea557544cb8c4c2dd66437a237"
 		}
 	],
 	

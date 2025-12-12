@@ -1,6 +1,11 @@
 import type { Apparatus } from '../types';
 
 /**
+ * Cloudflare Worker URL for API requests
+ */
+export const WORKER_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev';
+
+/**
  * List of all apparatus in the MBFD fleet
  * Update this list when new apparatus are added to the system
  */
