@@ -55,7 +55,7 @@ export const LoginScreen: React.FC = () => {
               <img 
                 src="/mbfd-checkout-system/mbfd_logo.jpg" 
                 alt="MBFD Logo" 
-                className="w-10 h-10 object-contain"
+                className="w-full h-full object-contain"
               />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-blue-700 bg-clip-text text-transparent mb-1">
