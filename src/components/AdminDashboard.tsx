@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
-import { Modal } from './ui/Modal';
 import { AIFleetInsights } from './AIFleetInsights';
 import { InventoryTab } from './inventory/InventoryTab';
 import { githubService } from '../lib/github';
@@ -37,10 +36,6 @@ export const AdminDashboard: React.FC = () => {
   const [dailySubmissions, setDailySubmissions] = useState<DailySubmissions | null>(null);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDefect, setSelectedDefect] = useState<Defect | null>(null);
-  const [resolutionNote, setResolutionNote] = useState('');
-  const [isResolving, setIsResolving] = useState(false);
-  const [showResolveSuccess, setShowResolveSuccess] = useState(false);
 
   // Email notification state
   const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
@@ -51,53 +46,18 @@ export const AdminDashboard: React.FC = () => {
   // AI Insights state
   const [criticalAlertsCount, setCriticalAlertsCount] = useState(0);
 
-  // Vehicle inspection history state
-  const [selectedApparatus, setSelectedApparatus] = useState<string | null>(null);
-  const [apparatusLogs, setApparatusLogs] = useState<any[]>([]);
-  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  // Photo lightbox state
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
 
   const loadApparatusLogs = async (apparatus: string) => {
-    setIsLoadingLogs(true);
     try {
       const logs = await githubService.getInspectionLogs(30); // Last 30 days
       // Filter logs for this apparatus
       const filteredLogs = logs.filter(log => log.title.includes(`[${apparatus}]`));
-      setApparatusLogs(filteredLogs);
-      setSelectedApparatus(apparatus);
+      console.log('Loaded inspection logs:', filteredLogs);
     } catch (error) {
       console.error('Error loading apparatus logs:', error);
       alert('Failed to load inspection history');
-    } finally {
-      setIsLoadingLogs(false);
-    }
-  };
-
-  const handlePasswordSubmit = async () => {
-    if (!passwordInput.trim()) {
-      setPasswordError('Please enter a password');
-      return;
-    }
-
-    // Set the password and try to load data
-    githubService.setAdminPassword(passwordInput);
-    // Also store in localStorage for inventory API calls
-    localStorage.setItem('adminPassword', passwordInput);
-    
-    try {
-      await loadDashboardData();
-      setIsAuthenticated(true);
-      setPasswordError('');
-    } catch (err) {
-      console.error('Authentication failed:', err);
-      if (err instanceof Error && err.message.includes('Unauthorized')) {
-        setPasswordError('Incorrect password. Please try again.');
-      } else if (err instanceof Error && err.message.includes('Failed to fetch')) {
-        setPasswordError('Network error. Please check your connection and try again.');
-      } else {
-        setPasswordError('Authentication failed. Please try again.');
-      }
-      githubService.clearAdminPassword();
-      localStorage.removeItem('adminPassword');
     }
   };
 
@@ -141,45 +101,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleResolve = async () => {
-    if (!selectedDefect || !resolutionNote.trim()) {
-      alert('Please enter resolution notes');
+  const handlePasswordSubmit = async () => {
+    if (!passwordInput.trim()) {
+      setPasswordError('Please enter a password');
       return;
     }
 
-    if (!selectedDefect.issueNumber) {
-      alert('Unable to resolve: Issue number not found');
-      return;
-    }
-
-    setIsResolving(true);
+    // Set the password and try to load data
+    githubService.setAdminPassword(passwordInput);
+    // Also store in localStorage for inventory API calls
+    localStorage.setItem('adminPassword', passwordInput);
+    
     try {
-      await githubService.resolveDefect(
-        selectedDefect.issueNumber!,
-        resolutionNote,
-        'Admin'
-      );
-      
-      // Refresh data
       await loadDashboardData();
-      
-      setSelectedDefect(null);
-      setResolutionNote('');
-      
-      // Show success toast
-      setShowResolveSuccess(true);
-      setTimeout(() => setShowResolveSuccess(false), 3000);
-    } catch (error) {
-      console.error('Error resolving defect:', error);
-      if ((error as Error).message.includes('Unauthorized')) {
-        alert('Session expired. Please re-enter the admin password.');
-        setIsAuthenticated(false);
-        githubService.clearAdminPassword();
+      setIsAuthenticated(true);
+      setPasswordError('');
+    } catch (err) {
+      console.error('Authentication failed:', err);
+      if (err instanceof Error && err.message.includes('Unauthorized')) {
+        setPasswordError('Incorrect password. Please try again.');
+      } else if (err instanceof Error && err.message.includes('Failed to fetch')) {
+        setPasswordError('Network error. Please check your connection and try again.');
       } else {
-        alert('Error resolving defect. Please try again.');
+        setPasswordError('Authentication failed. Please try again.');
       }
-    } finally {
-      setIsResolving(false);
+      githubService.clearAdminPassword();
+      localStorage.removeItem('adminPassword');
     }
   };
 
@@ -310,7 +257,7 @@ export const AdminDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -322,14 +269,6 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Success Toast */}
-      {showResolveSuccess && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" />
-          <span className="font-semibold">Defect resolved successfully!</span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
@@ -484,7 +423,7 @@ export const AdminDashboard: React.FC = () => {
                   {defects.map(defect => (
                     <Card key={`${defect.apparatus}-${defect.item}`} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2 flex-wrap">
                               <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
@@ -505,19 +444,23 @@ export const AdminDashboard: React.FC = () => {
                               Reported by {defect.reportedBy} on {formatDateTime(defect.reportedAt)}
                             </p>
                             {defect.notes && (
-                              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg">
+                              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg mb-2">
                                 {defect.notes.split('\n').slice(0, 3).join('\n')}
                               </p>
                             )}
+                            {defect.photoUrl && (
+                              <div className="mt-3">
+                                <button
+                                  onClick={() => setLightboxPhoto(defect.photoUrl || null)}
+                                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors border border-blue-200"
+                                >
+                                  <ImageIcon className="w-4 h-4" />
+                                  <span className="text-sm font-semibold">View Photo</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
-                          <Button
-                            onClick={() => setSelectedDefect(defect)}
-                            variant="primary"
-                            size="sm"
-                            className="mt-3 md:mt-0 md:ml-4"
-                          >
-                            Resolve
-                          </Button>
+
                         </div>
                       </CardContent>
                     </Card>
@@ -525,6 +468,28 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Photo Lightbox Modal */}
+            {lightboxPhoto && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4"
+                onClick={() => setLightboxPhoto(null)}
+              >
+                <button
+                  onClick={() => setLightboxPhoto(null)}
+                  className="absolute top-4 right-4 p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Close"
+                >
+                  <CloseIcon className="w-6 h-6 text-gray-900" />
+                </button>
+                <img
+                  src={lightboxPhoto}
+                  alt="Defect photo"
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            )}
           </>
         )}
 
@@ -935,189 +900,6 @@ export const AdminDashboard: React.FC = () => {
             )}
           </div>
         )}
-
-        {/* Vehicle Inspection History Modal */}
-        <Modal
-          isOpen={!!selectedApparatus}
-          onClose={() => {
-            setSelectedApparatus(null);
-            setApparatusLogs([]);
-          }}
-          title={`${selectedApparatus} - Inspection History (Last 30 Days)`}
-        >
-          {isLoadingLogs ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-              <p className="text-gray-600">Loading inspection history...</p>
-            </div>
-          ) : apparatusLogs.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-lg font-semibold text-gray-900">No Inspection History</p>
-              <p className="text-gray-600 mt-1">No inspections found for {selectedApparatus} in the last 30 days</p>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {apparatusLogs.map((log, idx) => {
-                const dateMatch = log.title.match(/- (.+)$/);
-                const inspectionDate = dateMatch ? dateMatch[1] : 'Unknown Date';
-                
-                // Parse body to extract summary info
-                const totalMatch = log.body.match(/Total Items Checked:\*\* (\d+)/);
-                const issuesMatch = log.body.match(/Issues Found:\*\* (\d+)/);
-                const totalItems = totalMatch ? parseInt(totalMatch[1]) : 0;
-                const issuesFound = issuesMatch ? parseInt(issuesMatch[1]) : 0;
-                
-                // Parse receipt URL if present
-                const receiptMatch = log.body.match(/\[View Full Printable Receipt\]\(([^)]+)\)/);
-                const receiptURL = receiptMatch ? receiptMatch[1] : null;
-                
-                const hasIssues = issuesFound > 0;
-                
-                return (
-                  <Card key={log.number || idx} className={`${hasIssues ? 'border-yellow-300' : 'border-green-300'}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Calendar className="w-4 h-4 text-gray-600" />
-                            <p className="font-semibold text-gray-900">{inspectionDate}</p>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            {formatDateTime(log.created_at)}
-                          </p>
-                        </div>
-                        {hasIssues ? (
-                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
-                            {issuesFound} Issue{issuesFound !== 1 ? 's' : ''}
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            All Clear
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 space-y-2">
-                        <div className="flex justify-between">
-                          <span className="font-medium">Items Checked:</span>
-                          <span className="font-semibold">{totalItems}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="font-medium">Issues Found:</span>
-                          <span className={`font-semibold ${hasIssues ? 'text-yellow-600' : 'text-green-600'}`}>
-                            {issuesFound}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {hasIssues && (
-                        <div className="mt-3 bg-yellow-50 p-3 rounded-lg">
-                          <p className="text-xs font-semibold text-yellow-900 mb-2">Issues Reported:</p>
-                          <div className="text-xs text-yellow-800 whitespace-pre-wrap">
-                            {log.body.split('### Issues Reported')[1]?.split('---')[0]?.trim() || 'Details not available'}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="mt-3 flex items-center gap-3 justify-end">
-                        {receiptURL && (
-                          <a
-                            href={receiptURL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-1"
-                          >
-                            📋 View Receipt
-                          </a>
-                        )}
-                        <a
-                          href={log.html_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          View Full Details →
-                        </a>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </Modal>
-
-        {/* Resolution Modal */}
-        <Modal
-          isOpen={!!selectedDefect}
-          onClose={() => {
-            setSelectedDefect(null);
-            setResolutionNote('');
-          }}
-          title="Resolve Defect"
-        >
-          {selectedDefect && (
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Apparatus</p>
-                <p className="font-semibold text-gray-900">{selectedDefect.apparatus}</p>
-                
-                <p className="text-sm text-gray-600 mt-3 mb-1">Item</p>
-                <p className="font-semibold text-gray-900">
-                  {selectedDefect.compartment}: {selectedDefect.item}
-                </p>
-                
-                <p className="text-sm text-gray-600 mt-3 mb-1">Status</p>
-                <p className="font-semibold text-gray-900">
-                  {selectedDefect.status === 'missing' ? 'Missing' : 'Damaged'}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Resolution Notes
-                </label>
-                <textarea
-                  value={resolutionNote}
-                  onChange={e => setResolutionNote((e.target as any).value)}
-                  placeholder="Describe how this was resolved (e.g., 'Replaced with spare', 'Item found and returned', 'Repaired by maintenance')"
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleResolve}
-                  disabled={isResolving || !resolutionNote.trim()}
-                  className="flex-1"
-                >
-                  {isResolving ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                      Resolving...
-                    </>
-                  ) : (
-                    'Mark as Resolved'
-                  )}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedDefect(null);
-                    setResolutionNote('');
-                  }}
-                  variant="secondary"
-                  className="flex-1"
-                  disabled={isResolving}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-        </Modal>
       </div>
     </div>
   );

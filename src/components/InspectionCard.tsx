@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Check, X, AlertTriangle, WrenchIcon } from 'lucide-react';
+import { Check, X, AlertTriangle, WrenchIcon, Camera, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import type { ItemStatus, CompartmentItem } from '../types';
+import { WORKER_URL } from '../lib/config';
 
 interface InspectionCardProps {
   item: string | CompartmentItem;
@@ -18,12 +19,20 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
   status,
   hasExistingDefect,
   onStatusChange,
+  compartmentId,
 }) => {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [modalType, setModalType] = useState<'missing' | 'damaged'>('missing');
   const [notes, setNotes] = useState('');
   const [showDefectStatusModal, setShowDefectStatusModal] = useState(false);
   const [radioNumber, setRadioNumber] = useState('');
+  
+  // Photo upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
 
   // Extract item data
   const itemName = typeof item === 'string' ? item : item.name;
@@ -61,19 +70,107 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
     setShowDefectStatusModal(false);
   };
 
-  const handleSubmitNotes = () => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      setUploadError('Please select a valid image file (JPG, PNG, WEBP, or GIF)');
+      return;
+    }
+
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setUploadError('File size must be less than 10MB');
+      return;
+    }
+
+    setSelectedFile(file);
+    setUploadError(null);
+
+    // Create preview URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setPreviewUrl(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setUploadedPhotoUrl(null);
+    setUploadError(null);
+  };
+
+  const uploadPhoto = async (): Promise<string | null> => {
+    if (!selectedFile) return null;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('inspector', 'Inspector'); // Will be filled from actual user context
+      formData.append('apparatus', compartmentId.split('-')[0] || 'Unknown');
+      formData.append('item', itemName);
+      formData.append('reportedAt', new Date().toISOString());
+
+      const response = await fetch(`${WORKER_URL}/api/uploads`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      setUploadedPhotoUrl(result.photoUrl);
+      return result.photoUrl;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+      setUploadError(errorMessage);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSubmitNotes = async () => {
     if (!notes.trim()) {
       alert('Please enter notes describing the issue');
       return;
     }
-    onStatusChange(modalType, notes, undefined, undefined, radioNumber);
+
+    // Upload photo if one is selected
+    let photoUrl = uploadedPhotoUrl;
+    if (selectedFile && !uploadedPhotoUrl) {
+      photoUrl = await uploadPhoto();
+      if (!photoUrl && uploadError) {
+        // Photo upload failed but allow submission
+        const proceed = confirm(
+          `Photo upload failed: ${uploadError}\n\nDo you want to submit without the photo?`
+        );
+        if (!proceed) return;
+      }
+    }
+
+    onStatusChange(modalType, notes, photoUrl || undefined, undefined, radioNumber);
     setShowNotesModal(false);
     setNotes('');
+    handleRemovePhoto();
   };
 
   const handleCancel = () => {
     setShowNotesModal(false);
     setNotes('');
+    handleRemovePhoto();
   };
 
   // Special rendering for radio items with text input
@@ -267,16 +364,85 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
               </div>
             )}
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-800">
-                📸 <strong>Photo upload coming soon!</strong> For now, please include detailed descriptions in your notes.
-              </p>
+            {/* Photo Upload Section */}
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-4">
+              <label className="block text-sm font-bold text-gray-700 mb-2">
+                📸 Photo (Optional)
+              </label>
+              
+              {previewUrl ? (
+                <div className="space-y-3">
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleRemovePhoto}
+                      variant="secondary"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      Remove Photo
+                    </Button>
+                    {!uploadedPhotoUrl && (
+                      <Button
+                        onClick={uploadPhoto}
+                        disabled={isUploading}
+                        size="sm"
+                        className="flex-1 flex items-center justify-center gap-2"
+                      >
+                        {isUploading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4" />
+                            Upload Now
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {uploadedPhotoUrl && (
+                      <span className="flex-1 text-sm text-green-600 font-semibold flex items-center justify-center gap-1">
+                        ✓ Uploaded
+                      </span>
+                    )}
+                  </div>
+                  {uploadError && (
+                    <p className="text-xs text-red-600">{uploadError}</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="photo-upload-radio"
+                  />
+                  <label
+                    htmlFor="photo-upload-radio"
+                    className="flex flex-col items-center justify-center py-6 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <Camera className="w-12 h-12 text-gray-400 mb-2" />
+                    <p className="text-sm font-semibold text-gray-700">Take Photo or Upload</p>
+                    <p className="text-xs text-gray-500 mt-1">JPG, PNG, WEBP, or GIF (max 10MB)</p>
+                  </label>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-2">
               <Button
                 onClick={handleSubmitNotes}
                 className="flex-1 h-12 text-base font-bold rounded-xl"
+                disabled={isUploading}
               >
                 Submit Report
               </Button>
@@ -284,6 +450,7 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
                 onClick={handleCancel}
                 variant="secondary"
                 className="flex-1 h-12 text-base font-bold rounded-xl"
+                disabled={isUploading}
               >
                 Cancel
               </Button>
@@ -460,17 +627,85 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
             </p>
           </div>
 
-          {/* TODO: Photo upload will be implemented in future update */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-xs text-blue-800">
-              📸 <strong>Photo upload coming soon!</strong> For now, please include detailed descriptions in your notes.
-            </p>
+          {/* Photo Upload Section */}
+          <div className="border-2 border-dashed border-gray-300 rounded-xl p-4">
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              📸 Photo (Optional)
+            </label>
+            
+            {previewUrl ? (
+              <div className="space-y-3">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleRemovePhoto}
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    Remove Photo
+                  </Button>
+                  {!uploadedPhotoUrl && (
+                    <Button
+                      onClick={uploadPhoto}
+                      disabled={isUploading}
+                      size="sm"
+                      className="flex-1 flex items-center justify-center gap-2"
+                    >
+                      {isUploading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          Upload Now
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  {uploadedPhotoUrl && (
+                    <span className="flex-1 text-sm text-green-600 font-semibold flex items-center justify-center gap-1">
+                      ✓ Uploaded
+                    </span>
+                  )}
+                </div>
+                {uploadError && (
+                  <p className="text-xs text-red-600">{uploadError}</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="photo-upload"
+                />
+                <label
+                  htmlFor="photo-upload"
+                  className="flex flex-col items-center justify-center py-6 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
+                >
+                  <Camera className="w-12 h-12 text-gray-400 mb-2" />
+                  <p className="text-sm font-semibold text-gray-700">Take Photo or Upload</p>
+                  <p className="text-xs text-gray-500 mt-1">JPG, PNG, WEBP, or GIF (max 10MB)</p>
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">
             <Button
               onClick={handleSubmitNotes}
               className="flex-1 h-12 text-base font-bold rounded-xl"
+              disabled={isUploading}
             >
               Submit Report
             </Button>
@@ -478,6 +713,7 @@ export const InspectionCard: React.FC<InspectionCardProps> = ({
               onClick={handleCancel}
               variant="secondary"
               className="flex-1 h-12 text-base font-bold rounded-xl"
+              disabled={isUploading}
             >
               Cancel
             </Button>

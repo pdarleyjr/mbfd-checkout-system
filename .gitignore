@@ -43,3 +43,6 @@ dist/
 # Implementation guides with secrets (DO NOT COMMIT)
 IMPLEMENTATION_GUIDE.md
 AI_CODING_AGENT_INSTRUCTIONS.md
+
+# Kilocode configuration (may contain secrets)
+.kilocode/

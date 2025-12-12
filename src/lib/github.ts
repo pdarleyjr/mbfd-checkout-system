@@ -119,7 +119,8 @@ class GitHubService {
             user.name,
             user.rank,
             date,
-            defect.notes
+            defect.notes,
+            defect.photoUrl
           );
         } else {
           // Create new issue
@@ -131,12 +132,13 @@ class GitHubService {
             defect.notes,
             user.name,
             user.rank,
-            date
+            date,
+            defect.photoUrl
           );
         }
       } catch (error) {
         defectErrors++;
-        const errorMsg = `${defect.compartment}: ${defect.item}`;
+        const errorMsg = `${defect.compartment}:${defect.item}`;
         errorMessages.push(errorMsg);
         console.error(`Failed to process defect ${errorMsg}:`, error);
         // Continue to next defect instead of throwing
@@ -164,10 +166,11 @@ class GitHubService {
     notes: string,
     reportedBy: string,
     rank: string,
-    date: string
+    date: string,
+    photoUrl?: string
   ): Promise<void> {
     const title = `[${apparatus}] ${compartment}: ${item} - ${status === 'missing' ? 'Missing' : 'Damaged'}`;
-    const body = `
+    let body = `
 ## Defect Report
 
 **Apparatus:** ${apparatus}
@@ -179,10 +182,17 @@ class GitHubService {
 
 ### Notes
 ${notes}
+`;
 
----
-*This issue was automatically created by the MBFD Checkout System.*
-`.trim();
+    // Add photo if available
+    if (photoUrl) {
+      body += `\n### Photo Evidence\n\n![Defect Photo](${photoUrl})\n`;
+    }
+
+    body += `\n---
+*This issue was automatically created by the MBFD Checkout System.*`;
+
+    body = body.trim();
 
     const labels = [LABELS.DEFECT, apparatus];
     if (status === 'damaged') {
@@ -213,19 +223,27 @@ ${notes}
     verifiedBy: string,
     rank: string,
     date: string,
-    notes?: string
+    notes?: string,
+    photoUrl?: string
   ): Promise<void> {
-    const body = `
+    let body = `
 ### Verification Update
 
 **Verified still present by:** ${verifiedBy} (${rank})
 **Date:** ${date}
 
 ${notes ? `**Additional Notes:** ${notes}` : ''}
+`;
 
----
-*This comment was automatically added by the MBFD Checkout System.*
-`.trim();
+    // Add photo if available
+    if (photoUrl) {
+      body += `\n### Photo Evidence\n\n![Defect Photo](${photoUrl})\n`;
+    }
+
+    body += `\n---
+*This comment was automatically added by the MBFD Checkout System.*`;
+
+    body = body.trim();
 
     try {
       const response = await fetch(`${API_BASE_URL}/issues/${issueNumber}/comments`, {
@@ -289,7 +307,7 @@ ${notes ? `**Additional Notes:** ${notes}` : ''}
 
 ${submission.defects.length > 0 ? `
 ### Issues Reported
-${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}`
+${submission.defects.map(d => `- ${d.compartment}: ${d.item} - ${d.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}`).join('\n')}}`
  : '✅ All items present and working'}
 `;
 
