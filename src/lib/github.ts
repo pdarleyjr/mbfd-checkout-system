@@ -465,7 +465,7 @@ ${resolutionNote}
 
   /**
    * Fetch inspection logs (ADMIN ONLY)
-   * Get closed issues with 'Log' label
+   * Get issues with 'Log' label (querying all states since closing may fail)
    */
   async getInspectionLogs(days: number = 7): Promise<GitHubIssue[]> {
     try {
@@ -473,7 +473,7 @@ ${resolutionNote}
       sinceDate.setDate(sinceDate.getDate() - days);
       
       const response = await fetch(
-        `${API_BASE_URL}/issues?state=closed&labels=${LABELS.LOG}&per_page=100&since=${sinceDate.toISOString()}`,
+        `${API_BASE_URL}/issues?state=all&labels=${LABELS.LOG}&per_page=100&since=${sinceDate.toISOString()}`,
         {
           method: 'GET',
           headers: this.getHeaders(true), // Admin request
