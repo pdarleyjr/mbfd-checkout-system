@@ -17,6 +17,12 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Google Service Account Keys (DO NOT COMMIT)
+project-d82a253c-aba5-4ffb-ba2-107d5455f33a.json
+*-service-account.json
+*.key
+*.pem
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
