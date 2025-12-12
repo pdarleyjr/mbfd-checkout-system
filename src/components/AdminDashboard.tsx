@@ -51,6 +51,27 @@ export const AdminDashboard: React.FC = () => {
   // AI Insights state
   const [criticalAlertsCount, setCriticalAlertsCount] = useState(0);
 
+  // Vehicle inspection history state
+  const [selectedApparatus, setSelectedApparatus] = useState<string | null>(null);
+  const [apparatusLogs, setApparatusLogs] = useState<any[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+
+  const loadApparatusLogs = async (apparatus: string) => {
+    setIsLoadingLogs(true);
+    try {
+      const logs = await githubService.getInspectionLogs(30); // Last 30 days
+      // Filter logs for this apparatus
+      const filteredLogs = logs.filter(log => log.title.includes(`[${apparatus}]`));
+      setApparatusLogs(filteredLogs);
+      setSelectedApparatus(apparatus);
+    } catch (error) {
+      console.error('Error loading apparatus logs:', error);
+      alert('Failed to load inspection history');
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
   const handlePasswordSubmit = async () => {
     if (!passwordInput.trim()) {
       setPasswordError('Please enter a password');
@@ -59,6 +80,8 @@ export const AdminDashboard: React.FC = () => {
 
     // Set the password and try to load data
     githubService.setAdminPassword(passwordInput);
+    // Also store in localStorage for inventory API calls
+    localStorage.setItem('adminPassword', passwordInput);
     
     try {
       await loadDashboardData();
@@ -74,6 +97,7 @@ export const AdminDashboard: React.FC = () => {
         setPasswordError('Authentication failed. Please try again.');
       }
       githubService.clearAdminPassword();
+      localStorage.removeItem('adminPassword');
     }
   };
 
@@ -109,6 +133,7 @@ export const AdminDashboard: React.FC = () => {
       if (error instanceof Error && error.message.includes('Unauthorized')) {
         setIsAuthenticated(false);
         githubService.clearAdminPassword();
+        localStorage.removeItem('adminPassword');
       }
       throw error;
     } finally {
@@ -146,7 +171,7 @@ export const AdminDashboard: React.FC = () => {
       setTimeout(() => setShowResolveSuccess(false), 3000);
     } catch (error) {
       console.error('Error resolving defect:', error);
-      if (error instanceof Error && error.message.includes('Unauthorized')) {
+      if ((error as Error).message.includes('Unauthorized')) {
         alert('Session expired. Please re-enter the admin password.');
         setIsAuthenticated(false);
         githubService.clearAdminPassword();
@@ -168,7 +193,7 @@ export const AdminDashboard: React.FC = () => {
       const config = await githubService.getEmailConfig(passwordInput);
       setEmailConfig(config);
     } catch (error) {
-      setConfigError(error instanceof Error ? error.message : 'Failed to load email configuration');
+      setConfigError((error as Error).message || 'Failed to load email configuration');
     } finally {
       setIsLoadingConfig(false);
     }
@@ -185,7 +210,7 @@ export const AdminDashboard: React.FC = () => {
       setEmailConfig(result.config);
       alert('Email configuration updated successfully');
     } catch (error) {
-      setConfigError(error instanceof Error ? error.message : 'Failed to update email configuration');
+      setConfigError((error as Error).message || 'Failed to update email configuration');
     } finally {
       setIsSavingConfig(false);
     }
@@ -200,7 +225,7 @@ export const AdminDashboard: React.FC = () => {
       await githubService.sendManualDigest(passwordInput);
       alert('Test digest sent successfully! Check your email.');
     } catch (error) {
-      alert('Failed to send test digest: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      alert('Failed to send test digest: ' + ((error as Error).message || 'Unknown error'));
     }
   };
 
@@ -243,7 +268,7 @@ export const AdminDashboard: React.FC = () => {
                   onChange={(e) => {
                     setPasswordInput(e.target.value);
                     setPasswordError('');
-      }}
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handlePasswordSubmit();
@@ -412,22 +437,29 @@ export const AdminDashboard: React.FC = () => {
                   const isOk = defectCount === 0;
 
                   return (
-                    <Card key={apparatus} className={isOk ? 'border-green-500' : 'border-red-500'}>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-3">
-                          <Truck className={`w-8 h-8 ${isOk ? 'text-green-500' : 'text-red-500'}`} />
-                          {isOk ? (
-                            <CheckCircle className="w-6 h-6 text-green-500" />
-                          ) : (
-                            <AlertCircle className="w-6 h-6 text-red-500" />
-                          )}
-                        </div>
-                        <h3 className="font-bold text-gray-900 mb-1">{apparatus}</h3>
-                        <p className={`text-sm font-semibold ${isOk ? 'text-green-600' : 'text-red-600'}`}>
-                          {isOk ? '✓ All Clear' : `${defectCount} Defect${defectCount !== 1 ? 's' : ''}`}
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <div 
+                      key={apparatus}
+                      className="cursor-pointer hover:scale-105 transition-transform"
+                      onClick={() => loadApparatusLogs(apparatus)}
+                    >
+                      <Card className={isOk ? 'border-green-500' : 'border-red-500'}>
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <Truck className={`w-8 h-8 ${isOk ? 'text-green-500' : 'text-red-500'}`} />
+                            {isOk ? (
+                              <CheckCircle className="w-6 h-6 text-green-500" />
+                            ) : (
+                              <AlertCircle className="w-6 h-6 text-red-500" />
+                            )}
+                          </div>
+                          <h3 className="font-bold text-gray-900 mb-1">{apparatus}</h3>
+                          <p className={`text-sm font-semibold ${isOk ? 'text-green-600' : 'text-red-600'}`}>
+                            {isOk ? '✓ All Clear' : `${defectCount} Defect${defectCount !== 1 ? 's' : ''}`}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">Click to view history</p>
+                        </CardContent>
+                      </Card>
+                    </div>
                   );
                 })}
               </div>
@@ -729,7 +761,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="daily_digest"
                           checked={emailConfig.email_mode === 'daily_digest'}
-                          onChange={e => saveEmailConfig({ email_mode: e.target.value as any })}
+                          onChange={e => saveEmailConfig({ email_mode: (e.target as any).value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -743,7 +775,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="per_submission"
                           checked={emailConfig.email_mode === 'per_submission'}
-                          onChange={e => saveEmailConfig({ email_mode: e.target.value as any })}
+                          onChange={e => saveEmailConfig({ email_mode: (e.target as any).value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -757,7 +789,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="hybrid"
                           checked={emailConfig.email_mode === 'hybrid'}
-                          onChange={e => saveEmailConfig({ email_mode: e.target.value as any })}
+                          onChange={e => saveEmailConfig({ email_mode: (e.target as any).value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -827,7 +859,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={emailConfig.enable_immediate_for_critical}
-                        onChange={e => saveEmailConfig({ enable_immediate_for_critical: e.target.checked })}
+                        onChange={e => saveEmailConfig({ enable_immediate_for_critical: (e.target as any).checked })}
                         className="mt-1 w-5 h-5 text-blue-600 rounded"
                       />
                       <div>
@@ -848,7 +880,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="number"
                         value={emailConfig.daily_email_hard_cap}
-                        onChange={e => setEmailConfig({ ...emailConfig, daily_email_hard_cap: parseInt(e.target.value) || 250 })}
+                        onChange={e => setEmailConfig({ ...emailConfig, daily_email_hard_cap: parseInt((e.target as any).value) || 250 })}
                         className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         min="1"
                         max="500"
@@ -875,7 +907,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="text"
                         value={emailConfig.email_subject_template}
-                        onChange={e => setEmailConfig({ ...emailConfig, email_subject_template: e.target.value })}
+                        onChange={e => setEmailConfig({ ...emailConfig, email_subject_template: (e.target as any).value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="MBFD Daily Inspection Summary - {date}"
                       />
@@ -903,77 +935,176 @@ export const AdminDashboard: React.FC = () => {
             )}
           </div>
         )}
+
+        {/* Vehicle Inspection History Modal */}
+        <Modal
+          isOpen={!!selectedApparatus}
+          onClose={() => {
+            setSelectedApparatus(null);
+            setApparatusLogs([]);
+          }}
+          title={`${selectedApparatus} - Inspection History (Last 30 Days)`}
+        >
+          {isLoadingLogs ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+              <p className="text-gray-600">Loading inspection history...</p>
+            </div>
+          ) : apparatusLogs.length === 0 ? (
+            <div className="text-center py-12">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-lg font-semibold text-gray-900">No Inspection History</p>
+              <p className="text-gray-600 mt-1">No inspections found for {selectedApparatus} in the last 30 days</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {apparatusLogs.map((log, idx) => {
+                const dateMatch = log.title.match(/- (.+)$/);
+                const inspectionDate = dateMatch ? dateMatch[1] : 'Unknown Date';
+                
+                // Parse body to extract summary info
+                const totalMatch = log.body.match(/Total Items Checked:\*\* (\d+)/);
+                const issuesMatch = log.body.match(/Issues Found:\*\* (\d+)/);
+                const totalItems = totalMatch ? parseInt(totalMatch[1]) : 0;
+                const issuesFound = issuesMatch ? parseInt(issuesMatch[1]) : 0;
+                
+                const hasIssues = issuesFound > 0;
+                
+                return (
+                  <Card key={log.number || idx} className={`${hasIssues ? 'border-yellow-300' : 'border-green-300'}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar className="w-4 h-4 text-gray-600" />
+                            <p className="font-semibold text-gray-900">{inspectionDate}</p>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {formatDateTime(log.created_at)}
+                          </p>
+                        </div>
+                        {hasIssues ? (
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                            {issuesFound} Issue{issuesFound !== 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            All Clear
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 space-y-2">
+                        <div className="flex justify-between">
+                          <span className="font-medium">Items Checked:</span>
+                          <span className="font-semibold">{totalItems}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="font-medium">Issues Found:</span>
+                          <span className={`font-semibold ${hasIssues ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {issuesFound}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {hasIssues && (
+                        <div className="mt-3 bg-yellow-50 p-3 rounded-lg">
+                          <p className="text-xs font-semibold text-yellow-900 mb-2">Issues Reported:</p>
+                          <div className="text-xs text-yellow-800 whitespace-pre-wrap">
+                            {log.body.split('### Issues Reported')[1]?.split('---')[0]?.trim() || 'Details not available'}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-3 text-right">
+                        <a
+                          href={log.html_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          View Full Details →
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </Modal>
+
+        {/* Resolution Modal */}
+        <Modal
+          isOpen={!!selectedDefect}
+          onClose={() => {
+            setSelectedDefect(null);
+            setResolutionNote('');
+          }}
+          title="Resolve Defect"
+        >
+          {selectedDefect && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Apparatus</p>
+                <p className="font-semibold text-gray-900">{selectedDefect.apparatus}</p>
+                
+                <p className="text-sm text-gray-600 mt-3 mb-1">Item</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedDefect.compartment}: {selectedDefect.item}
+                </p>
+                
+                <p className="text-sm text-gray-600 mt-3 mb-1">Status</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedDefect.status === 'missing' ? 'Missing' : 'Damaged'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Resolution Notes
+                </label>
+                <textarea
+                  value={resolutionNote}
+                  onChange={e => setResolutionNote((e.target as any).value)}
+                  placeholder="Describe how this was resolved (e.g., 'Replaced with spare', 'Item found and returned', 'Repaired by maintenance')"
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleResolve}
+                  disabled={isResolving || !resolutionNote.trim()}
+                  className="flex-1"
+                >
+                  {isResolving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                      Resolving...
+                    </>
+                  ) : (
+                    'Mark as Resolved'
+                  )}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedDefect(null);
+                    setResolutionNote('');
+                  }}
+                  variant="secondary"
+                  className="flex-1"
+                  disabled={isResolving}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
-
-      {/* Resolution Modal */}
-      <Modal
-        isOpen={!!selectedDefect}
-        onClose={() => {
-          setSelectedDefect(null);
-          setResolutionNote('');
-        }}
-        title="Resolve Defect"
-      >
-        {selectedDefect && (
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">Apparatus</p>
-              <p className="font-semibold text-gray-900">{selectedDefect.apparatus}</p>
-              
-              <p className="text-sm text-gray-600 mt-3 mb-1">Item</p>
-              <p className="font-semibold text-gray-900">
-                {selectedDefect.compartment}: {selectedDefect.item}
-              </p>
-              
-              <p className="text-sm text-gray-600 mt-3 mb-1">Status</p>
-              <p className="font-semibold text-gray-900">
-                {selectedDefect.status === 'missing' ? 'Missing' : 'Damaged'}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Resolution Notes
-              </label>
-              <textarea
-                value={resolutionNote}
-                onChange={e => setResolutionNote(e.target.value)}
-                placeholder="Describe how this was resolved (e.g., 'Replaced with spare', 'Item found and returned', 'Repaired by maintenance')"
-                rows={4}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                onClick={handleResolve}
-                disabled={isResolving || !resolutionNote.trim()}
-                className="flex-1"
-              >
-                {isResolving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                    Resolving...
-                  </>
-                ) : (
-                  'Mark as Resolved'
-                )}
-              </Button>
-              <Button
-                onClick={() => {
-                  setSelectedDefect(null);
-                  setResolutionNote('');
-                }}
-                variant="secondary"
-                className="flex-1"
-                disabled={isResolving}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };
