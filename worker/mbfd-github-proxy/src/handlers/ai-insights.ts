@@ -91,13 +91,14 @@ async function generateInsights(env: Env, data: AIInsightRequest): Promise<void>
 
     // Build prompt based on available data
     const promptParts: string[] = [
-      'You are an inventory management assistant for a fire department.',
+      'You are an inventory management assistant for Miami Beach Fire Department.',
       'Analyze the following data and provide actionable insights in JSON format only.',
+      'IMPORTANT: Reference specific item names directly in your suggestions.',
       'Return ONLY a valid JSON object with these fields:',
       '- summary (string): Brief overview',
-      '- recurringIssues (array of strings): Patterns of frequently missing/damaged items',
-      '- reorderSuggestions (array of objects with {item, reason, urgency}): Items to reorder',
-      '- anomalies (array of strings): Unusual patterns or concerns',
+      '- recurringIssues (array of strings): Patterns of frequently missing/damaged items with specific item names',
+      '- reorderSuggestions (array of objects with {item, reason, urgency}): Items to reorder with specific reasons',
+      '- anomalies (array of strings): Unusual patterns or concerns with specific examples',
     ];
 
     if (data.tasks && data.tasks.length > 0) {
@@ -124,7 +125,7 @@ async function generateInsights(env: Env, data: AIInsightRequest): Promise<void>
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful inventory analyst. Always respond with valid JSON only.',
+          content: 'You are a helpful inventory analyst for Miami Beach Fire Department. Always respond with valid JSON only. Reference specific item names in your analysis.',
         },
         {
           role: 'user',

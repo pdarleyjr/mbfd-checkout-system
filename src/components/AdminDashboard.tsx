@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon, Check } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
+import { Modal } from './ui/Modal';
 import { AIFleetInsights } from './AIFleetInsights';
 import { InventoryTab } from './inventory/InventoryTab';
 import { githubService } from '../lib/github';
@@ -53,6 +54,15 @@ export const AdminDashboard: React.FC = () => {
 
   // Photo lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+
+  // Defect resolution state
+  const [defectToResolve, setDefectToResolve] = useState<Defect | null>(null);
+  const [resolutionNote, setResolutionNote] = useState('');
+  const [isResolvingDefect, setIsResolvingDefect] = useState(false);
+
+  // Defect filter/search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterApparatus, setFilterApparatus] = useState<string | null>(null);
 
   const loadApparatusLogs = async (apparatus: string) => {
     try {
@@ -197,6 +207,45 @@ export const AdminDashboard: React.FC = () => {
       alert('Test digest sent successfully! Check your email.');
     } catch (error) {
       alert('Failed to send test digest: ' + ((error as Error).message || 'Unknown error'));
+    }
+  };
+
+  const handleResolveDefect = async () => {
+    if (!defectToResolve || !defectToResolve.issueNumber) return;
+
+    setIsResolvingDefect(true);
+    try {
+      // Call the resolve API
+      await githubService.resolveDefect(
+        defectToResolve.issueNumber,
+        resolutionNote || 'Defect resolved via Admin Dashboard',
+        'Admin'
+      );
+
+      // Update UI optimistically - remove defect from list
+      setDefects(prevDefects => 
+        prevDefects.filter(d => d.issueNumber !== defectToResolve.issueNumber)
+      );
+
+      // Update fleet status
+      setFleetStatus(prevStatus => {
+        const newStatus = new Map(prevStatus);
+        const currentCount = newStatus.get(defectToResolve.apparatus) || 0;
+        newStatus.set(defectToResolve.apparatus, Math.max(0, currentCount - 1));
+        return newStatus;
+      });
+
+      // Close modal and reset
+      setDefectToResolve(null);
+      setResolutionNote('');
+      
+      // Optional: Show success message
+      alert('Defect successfully resolved!');
+    } catch (error) {
+      console.error('Error resolving defect:', error);
+      alert(`Failed to resolve defect: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsResolvingDefect(false);
     }
   };
 
@@ -441,6 +490,27 @@ export const AdminDashboard: React.FC = () => {
                 Open Defects ({defects.length})
               </h2>
 
+              {/* Search and Filter Controls */}
+              <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <input
+                  type="text"
+                  placeholder="Search defects..."
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <select
+                  value={filterApparatus || ''}
+                  onChange={(e) => setFilterApparatus(e.target.value || null)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                >
+                  <option value="">All Apparatus</option>
+                  {apparatusList.map(app => (
+                    <option key={app} value={app}>{app}</option>
+                  ))}
+                </select>
+              </div>
+
               {defects.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
@@ -451,8 +521,21 @@ export const AdminDashboard: React.FC = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {defects.map(defect => (
-                    <Card key={`${defect.apparatus}-${defect.item}`} className="hover:shadow-md transition-shadow">
+                  {/* Filter and sort the defects */}
+                  {defects
+                    .filter(d => 
+                      (!filterApparatus || d.apparatus === filterApparatus) &&
+                      (d.item.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       d.compartment.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       d.apparatus.toLowerCase().includes(searchQuery.toLowerCase()))
+                    )
+                    .sort((a, b) =>
+                      a.apparatus.localeCompare(b.apparatus) ||
+                      a.compartment.localeCompare(b.compartment) ||
+                      a.item.localeCompare(b.item)
+                    )
+                    .map(defect => (
+                    <Card key={`${defect.apparatus}-${defect.item}-${defect.issueNumber}`} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                           <div className="flex-1">
@@ -492,6 +575,20 @@ export const AdminDashboard: React.FC = () => {
                             )}
                           </div>
 
+                          {/* Resolve Button */}
+                          <div className="md:text-right">
+                            <Button
+                              onClick={() => {
+                                setDefectToResolve(defect);
+                                setResolutionNote('');
+                              }}
+                              className="bg-green-600 hover:bg-green-700"
+                              size="sm"
+                            >
+                              <Check className="w-4 h-4 mr-2" />
+                              Resolve
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -499,6 +596,76 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Resolve Defect Modal */}
+            <Modal
+              isOpen={defectToResolve !== null}
+              onClose={() => {
+                if (!isResolvingDefect) {
+                  setDefectToResolve(null);
+                  setResolutionNote('');
+                }
+              }}
+              title="Resolve Defect"
+            >
+              {defectToResolve && (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Apparatus</p>
+                    <p className="font-semibold text-gray-900">{defectToResolve.apparatus}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Defect</p>
+                    <p className="font-semibold text-gray-900">
+                      {defectToResolve.compartment}: {defectToResolve.item}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Status</p>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                      defectToResolve.status === 'missing'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {defectToResolve.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}
+                    </span>
+                  </div>
+                  <div>
+                    <label htmlFor="resolution-note" className="block text-sm font-semibold text-gray-700 mb-2">
+                      Resolution Notes (Optional)
+                    </label>
+                    <textarea
+                      id="resolution-note"
+                      value={resolutionNote}
+                      onChange={(e) => setResolutionNote(e.target.value)}
+                      placeholder="Describe how this defect was resolved..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                      rows={4}
+                      disabled={isResolvingDefect}
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <Button
+                      onClick={handleResolveDefect}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      disabled={isResolvingDefect}
+                    >
+                      {isResolvingDefect ? 'Resolving...' : 'Confirm Resolution'}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setDefectToResolve(null);
+                        setResolutionNote('');
+                      }}
+                      variant="secondary"
+                      disabled={isResolvingDefect}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Modal>
 
             {/* Photo Lightbox Modal */}
             {lightboxPhoto && (
