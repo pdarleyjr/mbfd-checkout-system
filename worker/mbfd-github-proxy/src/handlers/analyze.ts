@@ -165,25 +165,32 @@ async function analyzeWithAI(env: Env, inspectionData: any[]): Promise<string[]>
     `Inspection ${idx + 1}: ${inspection.title}\n${inspection.body?.substring(0, 500) || 'No details'}`
   ).join('\n\n');
 
-  const prompt = `You are an expert fleet maintenance analyst for the Manhattan Beach Fire Department. Analyze the following vehicle inspection data and provide actionable insights.
+  const prompt = `You are an expert fleet maintenance analyst for the Miami Beach Fire Department (MBFD). Analyze the following vehicle inspection data and provide actionable insights.
 
 Inspection Data (${inspectionData.length} inspections):
 ${dataSummary.substring(0, 3000)}
 
-Please provide a comprehensive fleet update with:
-1. Top 3 recurring equipment issues or defects across the fleet
-2. Apparatuses that need priority attention and why
-3. Patterns in inspection timing, completion rates, or defect trends
-4. Critical safety concerns based on reported defects
-5. Recommended preventive maintenance actions with priorities
-6. Overall fleet status and readiness assessment
+IMPORTANT INSTRUCTIONS:
+- Base ALL recommendations ONLY on patterns and issues you see in the inspection data above
+- DO NOT mention any equipment, apparatus, or issues that are not explicitly referenced in the data
+- For each insight, reference the specific apparatus or equipment that prompted it (e.g., "Engine 2's oxygen cylinder")
+- Include specific, actionable next steps for each recommendation
+- DO NOT provide generic or hypothetical advice
 
-Format your response as clear, actionable bullet points that administrators can implement. Focus on specific recommendations, not general observations.`;
+Please provide a comprehensive fleet update with:
+1. Top 3 recurring equipment issues or defects across the fleet (with apparatus names and frequency)
+2. Apparatuses that need priority attention and specific reasons based on the data
+3. Patterns in inspection timing, completion rates, or defect trends you observe
+4. Critical safety concerns based on reported defects with specific examples
+5. Recommended preventive maintenance actions with priorities and apparatus names
+6. Overall fleet status and readiness assessment based on the data
+
+Format your response as clear, actionable bullet points (start each with a dash -) that administrators can implement. Each bullet should reference specific apparatus or equipment when applicable.`;
 
   try {
     const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
       messages: [
-        { role: 'system', content: 'You are a fire department fleet maintenance analyst providing actionable insights for administrators.' },
+        { role: 'system', content: 'You are a fire department fleet maintenance analyst for Miami Beach Fire Department. Provide actionable insights based ONLY on the provided inspection data. Reference specific apparatus and equipment in your recommendations. Do not make up or assume information not in the data.' },
         { role: 'user', content: prompt }
       ],
       max_tokens: 800,

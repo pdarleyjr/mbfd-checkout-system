@@ -1,16 +1,21 @@
-const CACHE_NAME = 'mbfd-checkout-v2';
+const CACHE_NAME = 'mbfd-checkout-v3';
 const urlsToCache = [
   '/mbfd-checkout-system/',
   '/mbfd-checkout-system/index.html',
-  '/mbfd-checkout-system/data/rescue_checklist.json'
+  '/mbfd-checkout-system/offline.html',
+  '/mbfd-checkout-system/data/rescue_checklist.json',
+  '/mbfd-checkout-system/data/engine_checklist.json',
+  '/mbfd-checkout-system/data/ladder1_checklist.json',
+  '/mbfd-checkout-system/data/ladder3_checklist.json',
+  '/mbfd-checkout-system/data/rope_checklist.json'
 ];
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing new service worker...');
+  console.log('[SW] Install event - caching app shell and all checklists');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching app shell and checklist');
+        console.log('[SW] Caching:', urlsToCache.length, 'resources');
         return cache.addAll(urlsToCache);
       })
       .then(() => self.skipWaiting()) // Activate immediately
@@ -30,15 +35,18 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Offline: serve from cache
-          return caches.match(event.request);
+          // Offline: serve from cache first, then offline page as fallback
+          return caches.match(event.request)
+            .then(response => {
+              return response || caches.match('/mbfd-checkout-system/offline.html');
+            });
         })
     );
     return;
   }
   
-  // Network-first for checklist JSON (always get latest when online)
-  if (url.pathname.includes('rescue_checklist.json')) {
+  // Network-first for ALL checklist JSON files (always get latest when online)
+  if (url.pathname.includes('_checklist.json')) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
@@ -62,7 +70,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating new service worker...');
+  console.log('[SW] Activate event - cleaning up old caches');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
