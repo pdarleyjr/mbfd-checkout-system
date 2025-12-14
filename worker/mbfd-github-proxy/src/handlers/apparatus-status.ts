@@ -71,24 +71,29 @@ function parseInServiceUnit(notes: string): string | null {
 
 /**
  * Auto-detect the most recent sheet tab
- * Looks for date patterns like "11/21/25", "12/21/25"
+ * Looks for date patterns like "Apparatus report 11-21-2025", "Apparatus report 10-23-2025"
  * Falls back to "Sheet1" if no date pattern found
  */
 async function detectMostRecentSheet(env: Env, spreadsheetId: string): Promise<string> {
   try {
     const tabs = await getSheetTabs(env, spreadsheetId);
     
-    // Look for date patterns (MM/DD/YY or M/D/YY)
-    const datePattern = /(\d{1,2})\/(\d{1,2})\/(\d{2})/;
+    // Look for date patterns in format "Apparatus report MM-DD-YYYY" or standalone "MM-DD-YYYY" or "MM/DD/YY"
+    const datePattern = /(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/;
     const datedSheets = tabs
       .map(tab => {
         const match = tab.match(datePattern);
         if (!match) return null;
         
-        // Convert to date for sorting (assume 20XX for year)
+        // Convert to date for sorting
         const month = parseInt(match[1], 10);
         const day = parseInt(match[2], 10);
-        const year = 2000 + parseInt(match[3], 10);
+        let year = parseInt(match[3], 10);
+        
+        // Handle 2-digit vs 4-digit year
+        if (year < 100) {
+          year = 2000 + year; // Assume 20XX for 2-digit years
+        }
         
         return {
           name: tab,
@@ -100,6 +105,7 @@ async function detectMostRecentSheet(env: Env, spreadsheetId: string): Promise<s
     if (datedSheets.length > 0) {
       // Sort by date descending and return most recent
       datedSheets.sort((a, b) => b.date.getTime() - a.date.getTime());
+      console.log(`Detected most recent sheet: ${datedSheets[0].name}`);
       return datedSheets[0].name;
     }
     
