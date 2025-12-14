@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { APPARATUS_LIST } from '../lib/config';
@@ -225,7 +223,6 @@ const MBFD_PERSONNEL = [
 ];
 
 export const LoginScreen: React.FC = () => {
-  const navigate = useNavigate();
   const { getVehicleNumber } = useApparatusStatus();
   const [user, setUser] = useState<User>({
     name: '',
@@ -259,7 +256,7 @@ export const LoginScreen: React.FC = () => {
     
     // Store user data in session storage
     sessionStorage.setItem('user', JSON.stringify(user));
-    navigate('/inspection');
+    //navigate('/inspection');
   };
 
   const today = new Date().toLocaleDateString('en-US', { 
@@ -432,7 +429,10 @@ export const LoginScreen: React.FC = () => {
             {/* Admin Link */}
             <div className="text-center mt-4 pt-4 border-t border-gray-200">
               <button
-                onClick={() => navigate('/admin')}
+                onClick={() => {
+                  // Use window.location.hash for more reliable navigation with HashRouter
+                  window.location.hash = '#/admin';
+                }}
                 className="text-sm text-blue-700 hover:text-blue-800 font-semibold transition-colors"
               >
                 Admin Dashboard →

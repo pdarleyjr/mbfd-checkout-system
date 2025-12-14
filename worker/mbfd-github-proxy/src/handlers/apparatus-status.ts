@@ -160,19 +160,10 @@ export async function handleGetApparatusStatus(
     // Second pass: Parse Notes to find "In service as" mappings
     const apparatusMap = new Map<string, ApparatusStatus>();
     
+    // First pass: Add designation-based mappings (lower priority)
     for (const vehicle of vehicles) {
-      const inServiceUnit = parseInServiceUnit(vehicle.notes);
-      
-      if (inServiceUnit) {
-        // This vehicle is in service as a specific unit
-        apparatusMap.set(inServiceUnit, {
-          unit: inServiceUnit,
-          vehicleNo: vehicle.vehicleNo,
-          status: vehicle.assignment,
-          notes: vehicle.notes,
-        });
-      } else if (vehicle.designation) {
-        // Use designation as fallback (normalize it)
+      // Only add designation mappings for vehicles that are "In Service"
+      if (vehicle.designation && vehicle.assignment.toLowerCase().includes('in service')) {
         const normalizedUnit = normalizeApparatusName(vehicle.designation);
         if (normalizedUnit && !apparatusMap.has(normalizedUnit)) {
           apparatusMap.set(normalizedUnit, {
@@ -182,6 +173,21 @@ export async function handleGetApparatusStatus(
             notes: vehicle.notes,
           });
         }
+      }
+    }
+    
+    // Second pass: Override with "In service as" notes (higher priority)
+    for (const vehicle of vehicles) {
+      const inServiceUnit = parseInServiceUnit(vehicle.notes);
+      
+      if (inServiceUnit) {
+        // This vehicle is in service as a specific unit - ALWAYS takes priority
+        apparatusMap.set(inServiceUnit, {
+          unit: inServiceUnit,
+          vehicleNo: vehicle.vehicleNo,
+          status: vehicle.assignment,
+          notes: vehicle.notes,
+        });
       }
     }
 
