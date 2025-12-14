@@ -64,6 +64,9 @@ export const AdminDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterApparatus, setFilterApparatus] = useState<string | null>(null);
 
+  // Fleet Status sub-tab state (for toggling between Defects and History)
+  const [fleetSubTab, setFleetSubTab] = useState<'defects' | 'history'>('defects');
+
   const loadApparatusLogs = async (apparatus: string) => {
     try {
       setIsLoadingLogs(true);
@@ -448,7 +451,7 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'fleet' && (
           <>
             {/* Fleet Status Grid */}
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Fleet Status</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {apparatusList.map(apparatus => {
@@ -484,118 +487,303 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Defects List */}
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Open Defects ({defects.length})
-              </h2>
-
-              {/* Search and Filter Controls */}
-              <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <input
-                  type="text"
-                  placeholder="Search defects..."
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <select
-                  value={filterApparatus || ''}
-                  onChange={(e) => setFilterApparatus(e.target.value || null)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            {/* Sub-tab Navigation for Defects and History */}
+            <div className="border-b border-gray-200 mb-6">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFleetSubTab('defects')}
+                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${fleetSubTab === 'defects'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'}`}
                 >
-                  <option value="">All Apparatus</option>
-                  {apparatusList.map(app => (
-                    <option key={app} value={app}>{app}</option>
-                  ))}
-                </select>
+                  <AlertCircle className="w-5 h-5" />
+                  Open Defects ({defects.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setFleetSubTab('history');
+                    if (inspectionLogs.length === 0 && !isLoadingLogs) {
+                      loadAllInspectionLogs();
+                    }
+                  }}
+                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${fleetSubTab === 'history'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  <Calendar className="w-5 h-5" />
+                  Inspection History (Last 30 Days)
+                  {selectedApparatus && (
+                    <span className="text-sm text-blue-600">- {selectedApparatus}</span>
+                  )}
+                </button>
               </div>
+            </div>
 
-              {defects.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                    <p className="text-lg font-semibold text-gray-900">No Open Defects</p>
-                    <p className="text-gray-600 mt-1">All apparatus are fully operational</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {/* Filter and sort the defects */}
-                  {defects
-                    .filter(d => 
-                      (!filterApparatus || d.apparatus === filterApparatus) &&
-                      (d.item.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       d.compartment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       d.apparatus.toLowerCase().includes(searchQuery.toLowerCase()))
-                    )
-                    .sort((a, b) =>
-                      a.apparatus.localeCompare(b.apparatus) ||
-                      a.compartment.localeCompare(b.compartment) ||
-                      a.item.localeCompare(b.item)
-                    )
-                    .map(defect => (
-                    <Card key={`${defect.apparatus}-${defect.item}-${defect.issueNumber}`} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-                                {defect.apparatus}
-                              </span>
-                              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                defect.status === 'missing'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {defect.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}
-                              </span>
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">
-                              {defect.compartment}: {defect.item}
-                            </h3>
-                            <p className="text-gray-600 text-sm mb-2">
-                              Reported by {defect.reportedBy} on {formatDateTime(defect.reportedAt)}
-                            </p>
-                            {defect.notes && (
-                              <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg mb-2">
-                                {defect.notes.split('\n').slice(0, 3).join('\n')}
+            {/* Open Defects Content */}
+            {fleetSubTab === 'defects' && (
+              <div>
+                {/* Search and Filter Controls */}
+                <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <input
+                    type="text"
+                    placeholder="Search defects..."
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <select
+                    value={filterApparatus || ''}
+                    onChange={(e) => setFilterApparatus(e.target.value || null)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">All Apparatus</option>
+                    {apparatusList.map(app => (
+                      <option key={app} value={app}>{app}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {defects.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                      <p className="text-lg font-semibold text-gray-900">No Open Defects</p>
+                      <p className="text-gray-600 mt-1">All apparatus are fully operational</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Filter and sort the defects */}
+                    {defects
+                      .filter(d => 
+                        (!filterApparatus || d.apparatus === filterApparatus) &&
+                        (d.item.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         d.compartment.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         d.apparatus.toLowerCase().includes(searchQuery.toLowerCase()))
+                      )
+                      .sort((a, b) =>
+                        a.apparatus.localeCompare(b.apparatus) ||
+                        a.compartment.localeCompare(b.compartment) ||
+                        a.item.localeCompare(b.item)
+                      )
+                      .map(defect => (
+                      <Card key={`${defect.apparatus}-${defect.item}-${defect.issueNumber}`} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-6">
+                          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                                  {defect.apparatus}
+                                </span>
+                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                  defect.status === 'missing'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {defect.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}
+                                </span>
+                              </div>
+                              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                {defect.compartment}: {defect.item}
+                              </h3>
+                              <p className="text-gray-600 text-sm mb-2">
+                                Reported by {defect.reportedBy} on {formatDateTime(defect.reportedAt)}
                               </p>
-                            )}
-                            {defect.photoUrl && (
-                              <div className="mt-3">
-                                <button
-                                  onClick={() => setLightboxPhoto(defect.photoUrl || null)}
-                                  className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors border border-blue-200"
-                                >
-                                  <ImageIcon className="w-4 h-4" />
-                                  <span className="text-sm font-semibold">View Photo</span>
-                                </button>
+                              {defect.notes && (
+                                <p className="text-gray-700 text-sm bg-gray-50 p-3 rounded-lg mb-2 break-words">
+                                  {defect.notes.split('\n').slice(0, 3).join('\n')}
+                                </p>
+                              )}
+                              {defect.photoUrl && (
+                                <div className="mt-3">
+                                  <button
+                                    onClick={() => setLightboxPhoto(defect.photoUrl || null)}
+                                    className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors border border-blue-200"
+                                  >
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span className="text-sm font-semibold">View Photo</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Resolve Button */}
+                            <div className="md:text-right flex-shrink-0">
+                              <Button
+                                onClick={() => {
+                                  setDefectToResolve(defect);
+                                  setResolutionNote('');
+                                }}
+                                className="bg-green-600 hover:bg-green-700"
+                                size="sm"
+                              >
+                                <Check className="w-4 h-4 mr-2" />
+                                Resolve
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Inspection History Content */}
+            {fleetSubTab === 'history' && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    {selectedApparatus && (
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                        Filtered: {selectedApparatus}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {selectedApparatus && (
+                      <Button
+                        onClick={loadAllInspectionLogs}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        View All
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => selectedApparatus ? loadApparatusLogs(selectedApparatus) : loadAllInspectionLogs()}
+                      variant="secondary"
+                      size="sm"
+                      disabled={isLoadingLogs}
+                    >
+                      {isLoadingLogs ? 'Loading...' : 'Refresh'}
+                    </Button>
+                  </div>
+                </div>
+
+                {isLoadingLogs ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <p className="text-gray-600 text-sm">Loading inspection logs...</p>
+                  </div>
+                ) : inspectionLogs.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600">
+                        {selectedApparatus
+                          ? `No inspection logs found for ${selectedApparatus} in the last 30 days.`
+                          : 'No inspection logs found. Click an apparatus card in Fleet Status to view its history.'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {inspectionLogs.map(log => {
+                      // Parse log details from title and body
+                      const titleMatch = log.title.match(/\[(.+)\]\s+Daily Inspection\s*-\s*(.+)/);
+                      const apparatus = titleMatch ? titleMatch[1] : 'Unknown';
+                      const dateStr = titleMatch ? titleMatch[2] : formatDateTime(log.created_at);
+                      
+                      // Extract inspector info from body
+                      const inspectorMatch = log.body?.match(/\*\*Conducted By:\*\*\s*(.+?)\s*\((.+?)\)/);
+                      const inspector = inspectorMatch ? inspectorMatch[1] : 'Unknown';
+                      const rank = inspectorMatch ? inspectorMatch[2] : '';
+                      
+                      // Extract item count
+                      const itemsMatch = log.body?.match(/\*\*Total Items Checked:\*\*\s*(\d+)/);
+                      const totalItems = itemsMatch ? parseInt(itemsMatch[1]) : 0;
+                      
+                      // Extract defect count
+                      const defectsMatch = log.body?.match(/\*\*Issues Found:\*\*\s*(\d+)/);
+                      const defectCount = defectsMatch ? parseInt(defectsMatch[1]) : 0;
+                      
+                      // Extract receipt URL if present
+                      const receiptMatch = log.body?.match(/\[View Full Printable Receipt\]\((.+?)\)/);
+                      const receiptUrl = receiptMatch ? receiptMatch[1] : null;
+                      
+                      // Extract defect list
+                      const defectsSection = log.body?.match(/### Issues Reported\n([\s\S]+?)(?:\n\n|$)/);
+                      const defectsList = defectsSection 
+                        ? defectsSection[1].split('\n').filter(line => line.trim().startsWith('-'))
+                        : [];
+                      
+                      return (
+                        <Card
+                          key={log.number}
+                          className="hover:shadow-md transition-shadow"
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                                    {apparatus}
+                                  </span>
+                                  {defectCount === 0 ? (
+                                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold flex items-center gap-1">
+                                      <CheckCircle className="w-4 h-4" />
+                                      All Clear
+                                    </span>
+                                  ) : (
+                                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold flex items-center gap-1">
+                                      <AlertCircle className="w-4 h-4" />
+                                      {defectCount} Issue{defectCount !== 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-700 mb-1">
+                                  <strong>Inspector:</strong> {inspector} {rank && `(${rank})`}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  <strong>Date:</strong> {dateStr} • <strong>Items Checked:</strong> {totalItems}
+                                </p>
+                              </div>
+                              <div className="text-right text-xs text-gray-500 flex-shrink-0">
+                                #{log.number}
+                              </div>
+                            </div>
+                            
+                            {defectsList.length > 0 && (
+                              <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                                <p className="text-sm font-semibold text-red-900 mb-2">Reported Issues:</p>
+                                <ul className="text-sm text-red-800 space-y-1">
+                                  {defectsList.map((defect, idx) => (
+                                    <li key={idx} className="pl-2 break-words">{defect.replace(/^-\s*/, '')}</li>
+                                  ))}
+                                </ul>
                               </div>
                             )}
-                          </div>
-
-                          {/* Resolve Button */}
-                          <div className="md:text-right">
-                            <Button
-                              onClick={() => {
-                                setDefectToResolve(defect);
-                                setResolutionNote('');
-                              }}
-                              className="bg-green-600 hover:bg-green-700"
-                              size="sm"
-                            >
-                              <Check className="w-4 h-4 mr-2" />
-                              Resolve
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
+                            
+                            <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
+                              {receiptUrl && (
+                                <a
+                                  href={receiptUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-sm font-semibold transition-colors"
+                                >
+                                  📋 View Receipt
+                                </a>
+                              )}
+                              <a
+                                href={`https://github.com/pdarleyjr/mbfd-checkout-system/issues/${log.number}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-semibold transition-colors"
+                              >
+                                View on GitHub →
+                              </a>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Resolve Defect Modal */}
             <Modal
@@ -688,164 +876,6 @@ export const AdminDashboard: React.FC = () => {
                 />
               </div>
             )}
-
-            {/* Inspection History */}
-            <div className="mt-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Calendar className="w-6 h-6" />
-                Inspection History (Last 30 Days)
-                {selectedApparatus && (
-                  <span className="text-blue-600">- {selectedApparatus}</span>
-                )}
-              </h3>
-
-              <Card className="mb-6">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                      <Calendar className="w-5 h-5" />
-                      Inspection History (Last 30 Days)
-                    </h3>
-                    <div className="flex gap-2">
-                      {selectedApparatus && (
-                        <Button
-                          onClick={loadAllInspectionLogs}
-                          variant="secondary"
-                          size="sm"
-                        >
-                          View All
-                        </Button>
-                      )}
-                      <Button
-                        onClick={() => selectedApparatus ? loadApparatusLogs(selectedApparatus) : loadAllInspectionLogs()}
-                        variant="secondary"
-                        size="sm"
-                        disabled={isLoadingLogs}
-                      >
-                        {isLoadingLogs ? 'Loading...' : 'Refresh'}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {isLoadingLogs ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                      <p className="text-gray-600 text-sm">Loading inspection logs...</p>
-                    </div>
-                  ) : inspectionLogs.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600">
-                        {selectedApparatus
-                          ? `No inspection logs found for ${selectedApparatus} in the last 30 days.`
-                          : 'No inspection logs found. Click an apparatus card in Fleet Status to view its history.'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {inspectionLogs.map(log => {
-                        // Parse log details from title and body
-                        const titleMatch = log.title.match(/\[(.+)\]\s+Daily Inspection\s*-\s*(.+)/);
-                        const apparatus = titleMatch ? titleMatch[1] : 'Unknown';
-                        const dateStr = titleMatch ? titleMatch[2] : formatDateTime(log.created_at);
-                        
-                        // Extract inspector info from body
-                        const inspectorMatch = log.body?.match(/\*\*Conducted By:\*\*\s*(.+?)\s*\((.+?)\)/);
-                        const inspector = inspectorMatch ? inspectorMatch[1] : 'Unknown';
-                        const rank = inspectorMatch ? inspectorMatch[2] : '';
-                        
-                        // Extract item count
-                        const itemsMatch = log.body?.match(/\*\*Total Items Checked:\*\*\s*(\d+)/);
-                        const totalItems = itemsMatch ? parseInt(itemsMatch[1]) : 0;
-                        
-                        // Extract defect count
-                        const defectsMatch = log.body?.match(/\*\*Issues Found:\*\*\s*(\d+)/);
-                        const defectCount = defectsMatch ? parseInt(defectsMatch[1]) : 0;
-                        
-                        // Extract receipt URL if present
-                        const receiptMatch = log.body?.match(/\[View Full Printable Receipt\]\((.+?)\)/);
-                        const receiptUrl = receiptMatch ? receiptMatch[1] : null;
-                        
-                        // Extract defect list
-                        const defectsSection = log.body?.match(/### Issues Reported\n([\s\S]+?)(?:\n\n|$)/);
-                        const defectsList = defectsSection 
-                          ? defectsSection[1].split('\n').filter(line => line.trim().startsWith('-'))
-                          : [];
-                        
-                        return (
-                          <div
-                            key={log.number}
-                            className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-                                    {apparatus}
-                                  </span>
-                                  {defectCount === 0 ? (
-                                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold flex items-center gap-1">
-                                      <CheckCircle className="w-4 h-4" />
-                                      All Clear
-                                    </span>
-                                  ) : (
-                                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold flex items-center gap-1">
-                                      <AlertCircle className="w-4 h-4" />
-                                      {defectCount} Issue{defectCount !== 1 ? 's' : ''}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm text-gray-700 mb-1">
-                                  <strong>Inspector:</strong> {inspector} {rank && `(${rank})`}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  <strong>Date:</strong> {dateStr} • <strong>Items Checked:</strong> {totalItems}
-                                </p>
-                              </div>
-                              <div className="text-right text-xs text-gray-500">
-                                #{log.number}
-                              </div>
-                            </div>
-                            
-                            {defectsList.length > 0 && (
-                              <div className="mt-3 mb-3 bg-red-50 border-l-4 border-red-500 p-3 rounded">
-                                <p className="text-sm font-semibold text-red-900 mb-2">Reported Issues:</p>
-                                <ul className="text-sm text-red-800 space-y-1">
-                                  {defectsList.map((defect, idx) => (
-                                    <li key={idx} className="pl-2">{defect.replace(/^-\s*/, '')}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            
-                            <div className="flex gap-2 pt-3 border-t border-gray-200">
-                              {receiptUrl && (
-                                <a
-                                  href={receiptUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-sm font-semibold transition-colors"
-                                >
-                                  📋 View Receipt
-                                </a>
-                              )}
-                              <a
-                                href={`https://github.com/pdarleyjr/mbfd-checkout-system/issues/${log.number}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-sm font-semibold transition-colors"
-                              >
-                                View on GitHub →
-                              </a>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
           </>
         )}
 
@@ -1082,7 +1112,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="daily_digest"
                           checked={emailConfig.email_mode === 'daily_digest'}
-                          onChange={e => saveEmailConfig({ email_mode: (e.target as any).value as any })}
+                          onChange={(e) => saveEmailConfig({ email_mode: (e.target as any).value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -1096,7 +1126,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="per_submission"
                           checked={emailConfig.email_mode === 'per_submission'}
-                          onChange={e => saveEmailConfig({ email_mode: (e.target as any).value as any })}
+                          onChange={(e) => saveEmailConfig({ email_mode: (e.target as any).value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
@@ -1110,7 +1140,7 @@ export const AdminDashboard: React.FC = () => {
                           name="email_mode"
                           value="hybrid"
                           checked={emailConfig.email_mode === 'hybrid'}
-                          onChange={e => saveEmailConfig({ email_mode: (e.target as any).value as any })}
+                          onChange={(e) => saveEmailConfig({ email_mode: (e.target as any).value as any })}
                           className="mt-1 w-5 h-5 text-blue-600"
                         />
                         <div>
