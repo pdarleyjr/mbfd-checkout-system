@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { APPARATUS_LIST } from '../lib/config';
+import { useApparatusStatus } from '../hooks/useApparatusStatus';
 import type { Rank, Shift, User, Apparatus } from '../types';
 
 const ranks: Rank[] = ['Firefighter', 'DE', 'Lieutenant', 'Captain', 'Chief'];
@@ -225,6 +226,7 @@ const MBFD_PERSONNEL = [
 
 export const LoginScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { getVehicleNumber } = useApparatusStatus();
   const [user, setUser] = useState<User>({
     name: '',
     rank: 'Firefighter',
@@ -233,6 +235,14 @@ export const LoginScreen: React.FC = () => {
     unitNumber: 'R1',
   });
   const [validationError, setValidationError] = useState('');
+
+  // Auto-populate vehicle number when apparatus changes
+  useEffect(() => {
+    const vehicleNo = getVehicleNumber(user.apparatus);
+    if (vehicleNo) {
+      setUser((prev) => ({ ...prev, unitNumber: vehicleNo }));
+    }
+  }, [user.apparatus, getVehicleNumber]);
 
   const handleStartInspection = () => {
     // Validate all required fields
