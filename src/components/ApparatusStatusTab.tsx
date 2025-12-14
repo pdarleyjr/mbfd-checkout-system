@@ -10,7 +10,6 @@ export const ApparatusStatusTab: React.FC = () => {
   const { 
     requests, 
     loading: requestsLoading, 
-    error: requestsError,
     pendingCount,
     approveRequest,
     rejectRequest,
