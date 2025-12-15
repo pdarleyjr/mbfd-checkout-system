@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon, Check } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon, Check, Menu, X } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
@@ -67,6 +67,9 @@ export const AdminDashboard: React.FC = () => {
 
   // Fleet Status sub-tab state (for toggling between Defects and History)
   const [fleetSubTab, setFleetSubTab] = useState<'defects' | 'history'>('defects');
+
+  // Mobile menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const loadApparatusLogs = async (apparatus: string) => {
     try {
@@ -353,110 +356,120 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Header - Responsive and Modern */}
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b border-blue-700 shadow-xl sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">MBFD Fleet Management System</p>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <img 
+                  src="/mbfd-checkout-system/mbfd_logo.jpg" 
+                  alt="MBFD" 
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white truncate">Admin Dashboard</h1>
+                <p className="text-xs sm:text-sm text-blue-200 mt-0.5 hidden sm:block">MBFD Fleet Management System</p>
+              </div>
             </div>
-            <Button
-              onClick={() => navigate('/')}
-              variant="secondary"
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back to Login
-            </Button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                onClick={() => navigate('/')}
+                variant="secondary"
+                className="hidden sm:flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-white/20"
+                size="sm"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden lg:inline">Back to Login</span>
+              </Button>
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="sm:hidden p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
+              </button>
+            </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-2 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('fleet')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'fleet'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <AlertCircle className="w-5 h-5" />
-              Inspection Issues
-            </button>
-            <button
-              onClick={() => setActiveTab('activity')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'activity'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <Calendar className="w-5 h-5" />
-              Daily Activity
-            </button>
-            <button
-              onClick={() => setActiveTab('supplies')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'supplies'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <Package className="w-5 h-5" />
-              Supply Alerts
-              {lowStockItems.length > 0 && (
-                <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {lowStockItems.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('inventory')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'inventory'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <Warehouse className="w-5 h-5" />
-              Inventory
-            </button>
-            <button
-              onClick={() => setActiveTab('apparatus-status')}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'apparatus-status'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <Truck className="w-5 h-5" />
-              Apparatus Status
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('notifications');
-                if (!emailConfig) loadEmailConfig();
-              }}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === 'notifications'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <Mail className="w-5 h-5" />
-              Notifications
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('insights');
-                setCriticalAlertsCount(0); // Clear badge when viewing
-              }}
-              className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 relative ${activeTab === 'insights'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              <Brain className="w-5 h-5" />
-              Fleet Insights
-              {criticalAlertsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
-                  {criticalAlertsCount}
-                </span>
-              )}
-            </button>
+          {/* Desktop Tabs - Horizontal scrollable on tablet */}
+          <div className={`${isMobileMenuOpen ? 'block' : 'hidden sm:block'}`}>
+            <div className="flex gap-1 border-b border-blue-700 overflow-x-auto pb-px scrollbar-hide">
+              <TabButton
+                icon={AlertCircle}
+                label="Inspection Issues"
+                isActive={activeTab === 'fleet'}
+                onClick={() => {
+                  setActiveTab('fleet');
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+              <TabButton
+                icon={Calendar}
+                label="Daily Activity"
+                isActive={activeTab === 'activity'}
+                onClick={() => {
+                  setActiveTab('activity');
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+              <TabButton
+                icon={Package}
+                label="Supply Alerts"
+                badge={lowStockItems.length}
+                isActive={activeTab === 'supplies'}
+                onClick={() => {
+                  setActiveTab('supplies');
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+              <TabButton
+                icon={Warehouse}
+                label="Inventory"
+                isActive={activeTab === 'inventory'}
+                onClick={() => {
+                  setActiveTab('inventory');
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+              <TabButton
+                icon={Truck}
+                label="Apparatus Status"
+                isActive={activeTab === 'apparatus-status'}
+                onClick={() => {
+                  setActiveTab('apparatus-status');
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+              <TabButton
+                icon={Mail}
+                label="Notifications"
+                isActive={activeTab === 'notifications'}
+                onClick={() => {
+                  setActiveTab('notifications');
+                  if (!emailConfig) loadEmailConfig();
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+              <TabButton
+                icon={Brain}
+                label="Fleet Insights"
+                badge={criticalAlertsCount}
+                badgeColor="red"
+                isActive={activeTab === 'insights'}
+                onClick={() => {
+                  setActiveTab('insights');
+                  setCriticalAlertsCount(0);
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Inspection Issues Tab */}
         {activeTab === 'fleet' && (
           <>
@@ -1303,5 +1316,42 @@ export const AdminDashboard: React.FC = () => {
         )}
       </div>
     </div>
+  );
+};
+
+// Tab Button Component for responsive navigation
+interface TabButtonProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  badge?: number;
+  badgeColor?: 'red' | 'yellow';
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ icon: Icon, label, badge, badgeColor = 'red', isActive, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        flex items-center gap-2 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 font-semibold
+        transition-all whitespace-nowrap relative flex-shrink-0 text-sm sm:text-base
+        ${isActive
+          ? 'text-white border-b-2 border-white bg-white/10'
+          : 'text-blue-200 hover:text-white hover:bg-white/5'
+        }
+      `}
+    >
+      <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+      <span className="hidden sm:inline">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className={`
+          ${badgeColor === 'red' ? 'bg-red-500' : 'bg-yellow-500'}
+          text-white text-xs px-2 py-0.5 rounded-full font-bold min-w-[20px] text-center
+        `}>
+          {badge}
+        </span>
+      )}
+    </button>
   );
 };

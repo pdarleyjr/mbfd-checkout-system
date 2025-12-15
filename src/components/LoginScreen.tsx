@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
@@ -224,6 +225,7 @@ const MBFD_PERSONNEL = [
 ];
 
 export const LoginScreen: React.FC = () => {
+  const navigate = useNavigate();
   const { getVehicleNumber } = useApparatusStatus();
   const [user, setUser] = useState<User>({
     name: '',
@@ -263,7 +265,7 @@ export const LoginScreen: React.FC = () => {
     
     // Store user data in session storage
     sessionStorage.setItem('user', JSON.stringify(user));
-    //navigate('/inspection');
+    navigate('/inspection');
   };
 
   const today = new Date().toLocaleDateString('en-US', { 
