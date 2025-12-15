@@ -379,8 +379,8 @@ export const AdminDashboard: React.FC = () => {
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-600 hover:text-gray-900'}`}
             >
-              <Truck className="w-5 h-5" />
-              Fleet Status
+              <AlertCircle className="w-5 h-5" />
+              Inspection Issues
             </button>
             <button
               onClick={() => setActiveTab('activity')}
@@ -457,12 +457,12 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Fleet Status Tab */}
+        {/* Inspection Issues Tab */}
         {activeTab === 'fleet' && (
           <>
-            {/* Fleet Status Grid */}
+            {/* Apparatus Overview Grid */}
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Fleet Status</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Equipment & Inventory Issues by Apparatus</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {apparatusList.map(apparatus => {
                   const defectCount = fleetStatus.get(apparatus) || 0;
@@ -486,7 +486,7 @@ export const AdminDashboard: React.FC = () => {
                           </div>
                           <h3 className="font-bold text-gray-900 mb-1">{apparatus}</h3>
                           <p className={`text-sm font-semibold ${isOk ? 'text-green-600' : 'text-red-600'}`}>
-                            {isOk ? '✓ All Clear' : `${defectCount} Defect${defectCount !== 1 ? 's' : ''}`}
+                            {isOk ? '✓ No Issues' : `${defectCount} Issue${defectCount !== 1 ? 's' : ''}`}
                           </p>
                           <p className="text-xs text-gray-500 mt-2">Click to view history</p>
                         </CardContent>
@@ -507,7 +507,7 @@ export const AdminDashboard: React.FC = () => {
                     : 'text-gray-600 hover:text-gray-900'}`}
                 >
                   <AlertCircle className="w-5 h-5" />
-                  Open Defects ({defects.length})
+                  Open Issues ({defects.length})
                 </button>
                 <button
                   onClick={() => {
@@ -531,7 +531,7 @@ export const AdminDashboard: React.FC = () => {
 
             {/* Open Defects Content */}
             {fleetSubTab === 'defects' && (
-              <div>
+              <>
                 {/* Search and Filter Controls */}
                 <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                   <input
@@ -557,8 +557,8 @@ export const AdminDashboard: React.FC = () => {
                   <Card>
                     <CardContent className="py-12 text-center">
                       <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                      <p className="text-lg font-semibold text-gray-900">No Open Defects</p>
-                      <p className="text-gray-600 mt-1">All apparatus are fully operational</p>
+                      <p className="text-lg font-semibold text-gray-900">No Open Issues</p>
+                      <p className="text-gray-600 mt-1">All apparatus equipment and inventory are fully operational</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -571,7 +571,7 @@ export const AdminDashboard: React.FC = () => {
                          d.compartment.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          d.apparatus.toLowerCase().includes(searchQuery.toLowerCase()))
                       )
-                      .sort((a, b) =>
+                      .sort((a, b) => 
                         a.apparatus.localeCompare(b.apparatus) ||
                         a.compartment.localeCompare(b.compartment) ||
                         a.item.localeCompare(b.item)
@@ -637,7 +637,7 @@ export const AdminDashboard: React.FC = () => {
                     ))}
                   </div>
                 )}
-              </div>
+              </>
             )}
 
             {/* Inspection History Content */}
@@ -690,35 +690,35 @@ export const AdminDashboard: React.FC = () => {
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {inspectionLogs.map(log => {
+                    { inspectionLogs.map(log => {
                       // Parse log details from title and body
                       const titleMatch = log.title.match(/\[(.+)\]\s+Daily Inspection\s*-\s*(.+)/);
                       const apparatus = titleMatch ? titleMatch[1] : 'Unknown';
                       const dateStr = titleMatch ? titleMatch[2] : formatDateTime(log.created_at);
-                      
+
                       // Extract inspector info from body
                       const inspectorMatch = log.body?.match(/\*\*Conducted By:\*\*\s*(.+?)\s*\((.+?)\)/);
                       const inspector = inspectorMatch ? inspectorMatch[1] : 'Unknown';
                       const rank = inspectorMatch ? inspectorMatch[2] : '';
-                      
+
                       // Extract item count
                       const itemsMatch = log.body?.match(/\*\*Total Items Checked:\*\*\s*(\d+)/);
                       const totalItems = itemsMatch ? parseInt(itemsMatch[1]) : 0;
-                      
+
                       // Extract defect count
                       const defectsMatch = log.body?.match(/\*\*Issues Found:\*\*\s*(\d+)/);
                       const defectCount = defectsMatch ? parseInt(defectsMatch[1]) : 0;
-                      
+
                       // Extract receipt URL if present
                       const receiptMatch = log.body?.match(/\[View Full Printable Receipt\]\((.+?)\)/);
                       const receiptUrl = receiptMatch ? receiptMatch[1] : null;
-                      
+
                       // Extract defect list
                       const defectsSection = log.body?.match(/### Issues Reported\n([\s\S]+?)(?:\n\n|$)/);
                       const defectsList = defectsSection 
                         ? defectsSection[1].split('\n').filter(line => line.trim().startsWith('-'))
                         : [];
-                      
+
                       return (
                         <Card
                           key={log.number}
