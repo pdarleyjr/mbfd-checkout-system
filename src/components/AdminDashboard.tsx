@@ -10,7 +10,7 @@ import { InventoryTab } from './inventory/InventoryTab';
 import { ApparatusStatusTab } from './ApparatusStatusTab';
 import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
-import { APPARATUS_LIST, FORMS_MANAGEMENT_ENABLED } from '../lib/config';
+import { APPARATUS_LIST } from '../lib/config';
 import type { Defect, EmailConfig, GitHubIssue } from '../types';
 import { fetchTasks, markTasksViewed } from '../lib/inventory';
 import FormsTab from './inventory/FormsTab';
