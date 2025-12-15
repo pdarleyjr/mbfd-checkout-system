@@ -134,9 +134,9 @@ export const ImportFormModal: React.FC<ImportFormModalProps> = ({
           id="pdf-upload"
         />
         <label htmlFor="pdf-upload">
-          <Button as="span" className="cursor-pointer">
+          <span className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg cursor-pointer transition-colors">
             Choose PDF File
-          </Button>
+          </span>
         </label>
         {selectedFile && (
           <p className="mt-4 text-sm text-gray-600">

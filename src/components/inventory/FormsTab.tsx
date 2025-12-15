@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { List, Plus, FileUp, Edit2, Trash2, AlertCircle } from 'lucide-react';
+import { List, Plus, FileUp, Edit2, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { WORKER_URL } from '../../lib/config';
