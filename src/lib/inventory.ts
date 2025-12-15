@@ -1,6 +1,6 @@
 /**
  * Inventory API Client
- * 
+ *
  * This module provides functions to interact with the inventory and task management endpoints.
  */
 
@@ -94,6 +94,7 @@ export async function fetchInventory(): Promise<{
 export async function fetchTasks(status: 'pending' | 'completed' | 'canceled' = 'pending'): Promise<{
   tasks: SupplyTask[];
   count: number;
+  unseenCount: number;
 }> {
   const response = await fetch(`${API_BASE}/tasks?status=${status}`, {
     method: 'GET',
@@ -103,6 +104,26 @@ export async function fetchTasks(status: 'pending' | 'completed' | 'canceled' = 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
     throw new Error(error.error || `Failed to fetch tasks: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Mark inventory tasks as viewed by admin (clears notification badge)
+ */
+export async function markTasksViewed(): Promise<{
+  success: boolean;
+  viewedAt: string;
+}> {
+  const response = await fetch(`${API_BASE}/tasks/mark-viewed`, {
+    method: 'POST',
+    headers: getHeaders(true), // Admin auth required
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to mark tasks as viewed: ${response.statusText}`);
   }
 
   return await response.json();

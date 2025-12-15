@@ -12,6 +12,7 @@ import { githubService } from '../lib/github';
 import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
 import type { Defect, EmailConfig, GitHubIssue } from '../types';
+import { fetchTasks, markTasksViewed } from '../lib/inventory';
 
 type TabType = 'home' | 'fleet' | 'activity' | 'supplies' | 'inventory' | 'apparatus-status' | 'notifications' | 'insights';
 
@@ -53,6 +54,9 @@ export const AdminDashboard: React.FC = () => {
 
   // AI Insights state
   const [criticalAlertsCount, setCriticalAlertsCount] = useState(0);
+
+  // Inventory notification state
+  const [unseenInventoryCount, setUnseenInventoryCount] = useState(0);
 
   // Photo lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
@@ -129,6 +133,14 @@ export const AdminDashboard: React.FC = () => {
         setLowStockItems(lowStock);
       } catch (err) {
         console.error('Error analyzing low stock:', err);
+      }
+
+      // Fetch unseen inventory count
+      try {
+        const tasksData = await fetchTasks('pending');
+        setUnseenInventoryCount(tasksData.unseenCount);
+      } catch (err) {
+        console.error('Error fetching unseen inventory count:', err);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -254,6 +266,32 @@ export const AdminDashboard: React.FC = () => {
       alert(`Failed to resolve defect: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsResolvingDefect(false);
+    }
+  };
+
+  const handleTabChange = async (tab: TabType) => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+
+    // When switching to inventory tab, mark tasks as viewed
+    if (tab === 'inventory' && unseenInventoryCount > 0) {
+      try {
+        await markTasksViewed();
+        setUnseenInventoryCount(0);
+      } catch (err) {
+        console.error('Error marking tasks as viewed:', err);
+        // Non-fatal error, continue anyway
+      }
+    }
+
+    // Load email config when switching to notifications tab
+    if (tab === 'notifications' && !emailConfig) {
+      loadEmailConfig();
+    }
+
+    // Reset critical alerts count when switching to insights tab
+    if (tab === 'insights') {
+      setCriticalAlertsCount(0);
     }
   };
 
@@ -401,67 +439,46 @@ export const AdminDashboard: React.FC = () => {
                 icon={Home}
                 label="Home"
                 isActive={activeTab === 'home'}
-                onClick={() => {
-                  setActiveTab('home');
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('home')}
               />
               <TabButton
                 icon={AlertCircle}
                 label="Inspection Issues"
                 badge={defects.length}
                 isActive={activeTab === 'fleet'}
-                onClick={() => {
-                  setActiveTab('fleet');
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('fleet')}
               />
               <TabButton
                 icon={Calendar}
                 label="Daily Activity"
                 isActive={activeTab === 'activity'}
-                onClick={() => {
-                  setActiveTab('activity');
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('activity')}
               />
               <TabButton
                 icon={Package}
                 label="Supply Alerts"
                 badge={lowStockItems.length}
                 isActive={activeTab === 'supplies'}
-                onClick={() => {
-                  setActiveTab('supplies');
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('supplies')}
               />
               <TabButton
                 icon={Warehouse}
                 label="Inventory"
+                badge={unseenInventoryCount}
                 isActive={activeTab === 'inventory'}
-                onClick={() => {
-                  setActiveTab('inventory');
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('inventory')}
               />
               <TabButton
                 icon={Truck}
                 label="Apparatus Status"
                 isActive={activeTab === 'apparatus-status'}
-                onClick={() => {
-                  setActiveTab('apparatus-status');
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('apparatus-status')}
               />
               <TabButton
                 icon={Mail}
                 label="Notifications"
                 isActive={activeTab === 'notifications'}
-                onClick={() => {
-                  setActiveTab('notifications');
-                  if (!emailConfig) loadEmailConfig();
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('notifications')}
               />
               <TabButton
                 icon={Brain}
@@ -469,11 +486,7 @@ export const AdminDashboard: React.FC = () => {
                 badge={criticalAlertsCount}
                 badgeColor="red"
                 isActive={activeTab === 'insights'}
-                onClick={() => {
-                  setActiveTab('insights');
-                  setCriticalAlertsCount(0);
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => handleTabChange('insights')}
               />
             </div>
           </div>
