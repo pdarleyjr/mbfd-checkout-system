@@ -6,7 +6,7 @@ import { useApparatusStatus } from '../hooks/useApparatusStatus';
 import { useVehicleChangeRequests } from '../hooks/useVehicleChangeRequests';
 
 export const ApparatusStatusTab: React.FC = () => {
-  const { statuses, loading: statusLoading, error: statusError, refetch: refetchStatuses } = useApparatusStatus();
+  const { statuses, allVehicles, loading: statusLoading, error: statusError, refetch: refetchStatuses } = useApparatusStatus();
   const { 
     requests, 
     loading: requestsLoading, 
@@ -89,13 +89,39 @@ export const ApparatusStatusTab: React.FC = () => {
     );
   }
 
+  // Helper to get the assigned unit for a vehicle from statuses
+  const getAssignedUnit = (vehicleNo: string): string | null => {
+    const status = statuses.find(s => s.vehicleNo === vehicleNo);
+    return status?.unit || null;
+  };
+
+  // Determine card styling based on status
+  const getVehicleCardClass = (status: string): string => {
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus.includes('out of service')) {
+      return 'border-2 border-red-500 bg-red-50 hover:border-red-600';
+    }
+    return 'border-2 border-gray-300 bg-white hover:border-blue-400';
+  };
+
+  const getStatusBadgeClass = (status: string): string => {
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus.includes('out of service')) {
+      return 'bg-red-600 text-white';
+    }
+    if (lowerStatus.includes('in service')) {
+      return 'bg-green-600 text-white';
+    }
+    return 'bg-gray-600 text-white';
+  };
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Apparatus Status</h2>
-          <p className="text-gray-600 mt-1">Vehicle assignments from the Apparatus Status Report</p>
+          <h2 className="text-2xl font-bold text-gray-900">Fleet Status</h2>
+          <p className="text-gray-600 mt-1">All vehicles and current assignments</p>
         </div>
         <Button onClick={() => { refetchStatuses(); refetchRequests(); }} variant="secondary">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -120,38 +146,69 @@ export const ApparatusStatusTab: React.FC = () => {
         </div>
       )}
 
-      {/* Current Apparatus-Vehicle Mappings */}
+      {/* All Vehicles Display */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Truck className="w-6 h-6 text-blue-700" />
-            <h3 className="text-xl font-bold text-gray-900">Current Vehicle Assignments</h3>
+            <h3 className="text-xl font-bold text-gray-900">All Vehicles</h3>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {statuses.map((status) => (
-              <div
-                key={status.unit}
-                className="border-2 border-gray-300 rounded-lg p-4 bg-white hover:border-blue-400 transition-colors"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h4 className="font-bold text-gray-900 text-lg">{status.unit}</h4>
-                    <p className="text-sm text-gray-600">{status.status}</p>
+            {allVehicles.map((vehicle) => {
+              const assignedUnit = getAssignedUnit(vehicle.vehicleNo);
+              const isOutOfService = vehicle.status.toLowerCase().includes('out of service');
+              
+              return (
+                <div
+                  key={vehicle.vehicleNo}
+                  className={`${getVehicleCardClass(vehicle.status)} rounded-lg p-4 transition-colors`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="text-3xl font-bold text-blue-700">#{vehicle.vehicleNo}</h4>
+                      {assignedUnit && (
+                        <p className="text-lg font-semibold text-gray-900 mt-1">{assignedUnit}</p>
+                      )}
+                      {!assignedUnit && vehicle.designation && (
+                        <p className="text-sm text-gray-600 mt-1">{vehicle.designation}</p>
+                      )}
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-bold rounded ${getStatusBadgeClass(vehicle.status)}`}>
+                      {vehicle.status}
+                    </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-blue-700">#{status.vehicleNo}</p>
+                  
+                  <div className="space-y-1 text-sm">
+                    {vehicle.assignment && (
+                      <p className="text-gray-700">
+                        <span className="font-semibold">Assignment:</span> {vehicle.assignment}
+                      </p>
+                    )}
+                    {vehicle.currentLocation && (
+                      <p className="text-gray-700">
+                        <span className="font-semibold">Location:</span> {vehicle.currentLocation}
+                      </p>
+                    )}
+                    {vehicle.notes && (
+                      <p className={`text-xs italic mt-2 ${isOutOfService ? 'text-red-700 font-semibold' : 'text-gray-500'}`}>
+                        {vehicle.notes}
+                      </p>
+                    )}
                   </div>
+                  
+                  {!assignedUnit && !vehicle.designation && (
+                    <div className="mt-2 pt-2 border-t border-gray-300">
+                      <span className="text-xs font-semibold text-gray-500 uppercase">Reserve</span>
+                    </div>
+                  )}
                 </div>
-                {status.notes && (
-                  <p className="text-xs text-gray-500 mt-2 italic">{status.notes}</p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
-          {statuses.length === 0 && (
-            <p className="text-center text-gray-500 py-8">No apparatus status data available</p>
+          {allVehicles.length === 0 && (
+            <p className="text-center text-gray-500 py-8">No vehicle data available</p>
           )}
         </CardContent>
       </Card>

@@ -312,10 +312,23 @@ export interface ApparatusStatus {
 }
 
 /**
+ * Vehicle interface - represents all vehicles from the apparatus status sheet
+ */
+export interface Vehicle {
+  vehicleNo: string;        // Vehicle number (e.g., "445", "1035")
+  designation: string;       // Unit designation (e.g., "R 1", "E 1")
+  assignment: string;        // Assignment type (e.g., "Station 1", "Reserve")
+  currentLocation: string;   // Where the vehicle is located
+  status: string;            // "In Service", "Out of Service", "Available"
+  notes: string;             // Any special notes including "In service as" directives
+}
+
+/**
  * Fetch apparatus status (apparatus-to-vehicle mappings)
  */
 export async function fetchApparatusStatus(): Promise<{
   statuses: ApparatusStatus[];
+  allVehicles: Vehicle[];
   fetchedAt: string;
   source: string;
 }> {

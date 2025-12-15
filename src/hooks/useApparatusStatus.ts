@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchApparatusStatus } from '../lib/inventory';
-import type { ApparatusStatus } from '../lib/inventory';
+import type { ApparatusStatus, Vehicle } from '../lib/inventory';
 
 interface UseApparatusStatusReturn {
   statuses: ApparatusStatus[];
+  allVehicles: Vehicle[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -15,6 +16,7 @@ interface UseApparatusStatusReturn {
  */
 export function useApparatusStatus(): UseApparatusStatusReturn {
   const [statuses, setStatuses] = useState<ApparatusStatus[]>([]);
+  const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +27,7 @@ export function useApparatusStatus(): UseApparatusStatusReturn {
     try {
       const data = await fetchApparatusStatus();
       setStatuses(data.statuses);
+      setAllVehicles(data.allVehicles || []);
     } catch (err) {
       console.error('Error fetching apparatus status:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch apparatus status');
@@ -45,6 +48,7 @@ export function useApparatusStatus(): UseApparatusStatusReturn {
 
   return {
     statuses,
+    allVehicles,
     loading,
     error,
     refetch: loadStatuses,
