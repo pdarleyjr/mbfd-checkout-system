@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon, Check, Menu, X } from 'lucide-react';
+import { Truck, AlertCircle, CheckCircle, ArrowLeft, Lock, Calendar, TrendingUp, AlertTriangle, Package, Mail, Brain, Warehouse, X as CloseIcon, Image as ImageIcon, Check, Menu, X, Home } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Modal } from './ui/Modal';
+import { DashboardHome } from './DashboardHome';
 import { AIFleetInsights } from './AIFleetInsights';
 import { InventoryTab } from './inventory/InventoryTab';
 import { ApparatusStatusTab } from './ApparatusStatusTab';
@@ -12,7 +13,7 @@ import { formatDateTime } from '../lib/utils';
 import { APPARATUS_LIST } from '../lib/config';
 import type { Defect, EmailConfig, GitHubIssue } from '../types';
 
-type TabType = 'fleet' | 'activity' | 'supplies' | 'inventory' | 'apparatus-status' | 'notifications' | 'insights';
+type TabType = 'home' | 'fleet' | 'activity' | 'supplies' | 'inventory' | 'apparatus-status' | 'notifications' | 'insights';
 
 interface DailySubmissions {
   today: string[];
@@ -32,7 +33,7 @@ export const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  const [activeTab, setActiveTab] = useState<TabType>('fleet');
+  const [activeTab, setActiveTab] = useState<TabType>('home');
   const [fleetStatus, setFleetStatus] = useState<Map<string, number>>(new Map());
   const [defects, setDefects] = useState<Defect[]>([]);
   const [dailySubmissions, setDailySubmissions] = useState<DailySubmissions | null>(null);
@@ -321,7 +322,7 @@ export const AdminDashboard: React.FC = () => {
                 onClick={handlePasswordSubmit}
                 className="w-full"
                 size="lg"
-              >
+                >
                 Access Admin Dashboard
               </Button>
 
@@ -329,7 +330,7 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   onClick={() => navigate('/')}
                   className="text-sm text-gray-600 hover:text-gray-900 font-medium"
-                >
+                  >
                   ← Back to Login
                 </button>
               </div>
@@ -397,8 +398,18 @@ export const AdminDashboard: React.FC = () => {
           <div className={`${isMobileMenuOpen ? 'block' : 'hidden sm:block'}`}>
             <div className="flex gap-1 border-b border-blue-700 overflow-x-auto pb-px scrollbar-hide">
               <TabButton
+                icon={Home}
+                label="Home"
+                isActive={activeTab === 'home'}
+                onClick={() => {
+                  setActiveTab('home');
+                  setIsMobileMenuOpen(false);
+                }}
+              />
+              <TabButton
                 icon={AlertCircle}
                 label="Inspection Issues"
+                badge={defects.length}
                 isActive={activeTab === 'fleet'}
                 onClick={() => {
                   setActiveTab('fleet');
@@ -454,7 +465,7 @@ export const AdminDashboard: React.FC = () => {
               />
               <TabButton
                 icon={Brain}
-                label="Fleet Insights"
+                label="AI Insights"
                 badge={criticalAlertsCount}
                 badgeColor="red"
                 isActive={activeTab === 'insights'}
@@ -470,12 +481,17 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Dashboard Home Tab */}
+        {activeTab === 'home' && (
+          <DashboardHome adminPassword={passwordInput} />
+        )}
+
         {/* Inspection Issues Tab */}
         {activeTab === 'fleet' && (
           <>
             {/* Apparatus Overview Grid */}
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Equipment & Inventory Issues by Apparatus</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Equipment & Vehicle Issues by Apparatus / Unit</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {apparatusList.map(apparatus => {
                   const defectCount = fleetStatus.get(apparatus) || 0;
@@ -515,9 +531,12 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setFleetSubTab('defects')}
-                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${fleetSubTab === 'defects'
+                  className={`
+                    px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
+                      fleetSubTab === 'defects'
                     ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'}`}
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
                   <AlertCircle className="w-5 h-5" />
                   Open Issues ({defects.length})
@@ -529,9 +548,12 @@ export const AdminDashboard: React.FC = () => {
                       loadAllInspectionLogs();
                     }
                   }}
-                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${fleetSubTab === 'history'
+                  className={`
+                    px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
+                      fleetSubTab === 'history'
                     ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'}`}
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
                   <Calendar className="w-5 h-5" />
                   Inspection History (Last 30 Days)
@@ -598,11 +620,13 @@ export const AdminDashboard: React.FC = () => {
                                 <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
                                   {defect.apparatus}
                                 </span>
-                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                  defect.status === 'missing'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-yellow-100 text-yellow-800'
-                                }`}>
+                                <span className={`
+                                  px-3 py-1 rounded-full text-sm font-semibold ${
+                                    defect.status === 'missing'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }
+                                `}>
                                   {defect.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}
                                 </span>
                               </div>
@@ -764,7 +788,7 @@ export const AdminDashboard: React.FC = () => {
                                 </p>
                               </div>
                               <div className="text-right text-xs text-gray-500 flex-shrink-0">
-                                #{log.number}
+                                <span className="text-xs text-gray-600">{inspector}</span> {rank && <span className="text-xs text-gray-600"> ({rank})</span>}
                               </div>
                             </div>
                             
@@ -833,11 +857,13 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Status</p>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                      defectToResolve.status === 'missing'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <span className={`
+                      inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                        defectToResolve.status === 'missing'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }
+                    `}>
                       {defectToResolve.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}
                     </span>
                   </div>
@@ -1330,6 +1356,15 @@ interface TabButtonProps {
 }
 
 const TabButton: React.FC<TabButtonProps> = ({ icon: Icon, label, badge, badgeColor = 'red', isActive, onClick }) => {
+  // Shorten label for mobile display
+  const mobileLabel = label === 'Home' ? 'Home'
+    : label === 'Inspection Issues' ? 'Issues'
+    : label === 'Daily Activity' ? 'Activity'
+    : label === 'Supply Alerts' ? 'Supplies'
+    : label === 'Apparatus Status' ? 'Apparatus'
+    : label === 'AI Insights' ? 'AI'
+    : label;
+
   return (
     <button
       onClick={onClick}
@@ -1344,6 +1379,7 @@ const TabButton: React.FC<TabButtonProps> = ({ icon: Icon, label, badge, badgeCo
     >
       <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
       <span className="hidden sm:inline">{label}</span>
+      <span className="sm:hidden">{mobileLabel}</span>
       {badge !== undefined && badge > 0 && (
         <span className={`
           ${badgeColor === 'red' ? 'bg-red-500' : 'bg-yellow-500'}
