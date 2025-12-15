@@ -129,7 +129,7 @@ export const ImportFormModal: React.FC<ImportFormModalProps> = ({
         <input
           type="file"
           accept="application/pdf"
-          onChange={handleFileSelect}
+          onChange={(e) => handleFileSelect(e)}
           className="hidden"
           id="pdf-upload"
         />
