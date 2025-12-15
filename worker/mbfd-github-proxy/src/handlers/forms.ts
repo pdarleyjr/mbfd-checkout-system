@@ -326,16 +326,16 @@ export async function handleCreateForm(
       await db
         .prepare(`
           INSERT INTO form_templates (id, name, json, created_at, modified_at, published_version)
-          VALUES (?, ?, ?, ?, ?, 1)
+          VALUES (?, ?, ?, ?, ?, ?)
         `)
-        .bind(templateId, templateNameToUse, jsonContent, now, now)
+        .bind(templateId, templateNameToUse, jsonContent, now, now, 1)
         .run();
 
       // Create initial version
       await db
         .prepare(`
           INSERT INTO form_versions (template_id, json, created_at, created_by, change_summary, is_published)
-          VALUES (?, ?, ?, ?, ?, 1)
+          VALUES (?, ?, ?, ?, ?, ?)
         `)
         .bind(templateId, jsonContent, now, 'Admin', 'Initial version', 1)
         .run();
@@ -346,9 +346,9 @@ export async function handleCreateForm(
     await db
       .prepare(`
         INSERT INTO apparatus (id, name, template_id, active)
-        VALUES (?, ?, ?, 1)
+        VALUES (?, ?, ?, ?)
       `)
-      .bind(apparatusId, apparatusName, templateId)
+      .bind(apparatusId, apparatusName, templateId, 1)
       .run();
 
     return new Response(JSON.stringify({ 
@@ -361,7 +361,16 @@ export async function handleCreateForm(
     });
   } catch (error) {
     console.error('Error creating form:', error);
-    return new Response(JSON.stringify({ error: 'Failed to create form' }), {
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : '',
+      type: typeof error,
+      error: JSON.stringify(error, null, 2)
+    });
+    return new Response(JSON.stringify({ 
+      error: 'Failed to create form',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

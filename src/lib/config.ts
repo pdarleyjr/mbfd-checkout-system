@@ -10,7 +10,7 @@ export const WORKER_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev';
  * Set to false initially for safe rollout
  * When enabled, forms are loaded from D1 database instead of static JSON files
  */
-export const FORMS_MANAGEMENT_ENABLED = false;
+export const FORMS_MANAGEMENT_ENABLED = true;
 
 /**
  * List of all apparatus in the MBFD fleet
