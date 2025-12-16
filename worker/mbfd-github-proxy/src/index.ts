@@ -48,6 +48,8 @@ import {
   handleUpdateForm,
   handleImportForm
 } from './handlers/forms';
+import { handleImageUpload, handleImageRetrieval } from './handlers/uploads';
+import { handleHealthCheck } from './handlers/health';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -135,6 +137,11 @@ export default {
         emailConfigured: !!(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN),
         kvConfigured: !!env.MBFD_CONFIG
       });
+    }
+
+    // Integration health check endpoint (admin only)
+    if (path === '/api/health/integrations') {
+      return await handleHealthCheck(request, env, corsHeaders);
     }
 
     // Origin check for security (allow requests only from our app)
