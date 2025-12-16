@@ -58,6 +58,9 @@ export const AdminDashboard: React.FC = () => {
 
   // Inventory notification state
   const [unseenInventoryCount, setUnseenInventoryCount] = useState(0);
+  
+  // Global notification badge state
+  const [totalUnreadNotifications, setTotalUnreadNotifications] = useState(0);
 
   // Photo lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
@@ -76,6 +79,12 @@ export const AdminDashboard: React.FC = () => {
 
   // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Update total unread notifications
+  useEffect(() => {
+    const total = unseenInventoryCount + criticalAlertsCount + defects.length;
+    setTotalUnreadNotifications(total);
+  }, [unseenInventoryCount, criticalAlertsCount, defects.length]);
 
   const loadApparatusLogs = async (apparatus: string) => {
     try {
@@ -142,6 +151,14 @@ export const AdminDashboard: React.FC = () => {
         setUnseenInventoryCount(tasksData.unseenCount);
       } catch (err) {
         console.error('Error fetching unseen inventory count:', err);
+      }
+      
+      // Load inspection logs for history
+      try {
+        const logs = await githubService.getInspectionLogs(30);
+        setInspectionLogs(logs);
+      } catch (err) {
+        console.error('Error loading inspection logs:', err);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -384,7 +401,7 @@ export const AdminDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -551,9 +568,8 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setFleetSubTab('defects')}
-                  className={`
-                    px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
-                      fleetSubTab === 'defects'
+                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
+                    fleetSubTab === 'defects'
                     ? 'text-blue-600 border-b-2 border-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
                     }`}
@@ -568,9 +584,8 @@ export const AdminDashboard: React.FC = () => {
                       loadAllInspectionLogs();
                     }
                   }}
-                  className={`
-                    px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
-                      fleetSubTab === 'history'
+                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${
+                    fleetSubTab === 'history'
                     ? 'text-blue-600 border-b-2 border-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
                     }`}
@@ -640,13 +655,11 @@ export const AdminDashboard: React.FC = () => {
                                 <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
                                   {defect.apparatus}
                                 </span>
-                                <span className={`
-                                  px-3 py-1 rounded-full text-sm font-semibold ${
-                                    defect.status === 'missing'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-yellow-100 text-yellow-800'
-                                  }
-                                `}>
+                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                  defect.status === 'missing'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
                                   {defect.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}
                                 </span>
                               </div>
@@ -877,13 +890,11 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Status</p>
-                    <span className={`
-                      inline-block px-3 py-1 rounded-full text-sm font-semibold ${
-                        defectToResolve.status === 'missing'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }
-                    `}>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
+                      defectToResolve.status === 'missing'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
                       {defectToResolve.status === 'missing' ? '❌ Missing' : '⚠️ Damaged'}
                     </span>
                   </div>
@@ -1365,7 +1376,6 @@ export const AdminDashboard: React.FC = () => {
             )}
           </div>
         )}
-
       </div>
     </div>
   );

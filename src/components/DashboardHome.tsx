@@ -65,6 +65,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword }) =
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      // Don't throw - allow partial data to be shown
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -120,16 +121,26 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword }) =
       const healthScore = Math.max(0, 100 - (affectedApparatus * 7) - (allDefects.length * 2));
       setFleetHealthScore(healthScore);
       
-      if (healthScore >= 90) {
+      if (healthScore >= 90 && allDefects.length === 0) {
         insights.push({
           text: `Fleet operating at optimal condition with ${healthScore}% health score`,
           type: 'positive'
+        });
+      } else if (healthScore >= 90) {
+        insights.push({
+          text: `Fleet health score: ${healthScore}% - minor issues detected but overall good condition`,
+          type: 'info'
         });
       }
       
       setFleetInsights(insights);
     } catch (error) {
       console.error('Error loading fleet data:', error);
+      // Set empty insights on error - show graceful degradation
+      setFleetInsights([{
+        text: 'Unable to load fleet data. Please refresh or check your connection.',
+        type: 'warning'
+      }]);
     }
   };
 
@@ -145,10 +156,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword }) =
           setParsedInventoryInsight(parsed);
         } catch (parseError) {
           console.error('Failed to parse inventory insights:', parseError);
+          // Keep the insight but don't show parsed data
+          setParsedInventoryInsight(null);
         }
+      } else {
+        // No insights available - this is okay, not an error
+        setInventoryInsights(null);
+        setParsedInventoryInsight(null);
       }
     } catch (error) {
       console.error('Error loading inventory insights:', error);
+      // Set null - gracefully handle missing inventory insights
+      setInventoryInsights(null);
+      setParsedInventoryInsight(null);
     }
   };
 
