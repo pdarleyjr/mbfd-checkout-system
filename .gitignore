@@ -43,6 +43,9 @@ dist/
 # Implementation guides with secrets (DO NOT COMMIT)
 IMPLEMENTATION_GUIDE.md
 AI_CODING_AGENT_INSTRUCTIONS.md
+BACKEND_CODING_AGENT_PROMPT.md
+FRONTEND_SPECIALIST_AGENT_PROMPT.md
 
 # Kilocode configuration (may contain secrets)
 .kilocode/
+.kilocodemodes
