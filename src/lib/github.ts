@@ -679,7 +679,9 @@ ${resolutionNote}
         throw new Error(`Failed to fetch defects for analysis: ${response.statusText}`);
       }
 
-      const issues: GitHubIssue[] = await response.json();
+      const data = await response.json();
+      // Handle case where response is not an array
+      const issues: GitHubIssue[] = Array.isArray(data) ? data : [];
       const itemMap = new Map<string, {
         compartment: string;
         apparatus: Set<string>;
