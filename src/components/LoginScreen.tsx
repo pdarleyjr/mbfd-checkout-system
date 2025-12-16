@@ -296,10 +296,10 @@ export const LoginScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-gray-100 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full shadow-2xl">
+      <Card className="max-w-md w-full shadow-2xl animate-fade-in">
         <CardContent className="py-8 px-6">
           {/* Logo/Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 animate-slide-down">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl mb-4 shadow-xl overflow-hidden">
               <img 
                 src="/mbfd-checkout-system/mbfd_logo.jpg" 
@@ -315,14 +315,14 @@ export const LoginScreen: React.FC = () => {
           </div>
 
           {/* Apparatus Display */}
-          <div className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-2 border-red-300 rounded-2xl p-4 mb-6 text-center shadow-inner">
+          <div className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-2 border-red-300 rounded-2xl p-4 mb-6 text-center shadow-inner animate-scale-in">
             <p className="text-sm text-gray-700 font-bold mb-1">SELECTED APPARATUS</p>
             <p className="text-3xl font-bold bg-gradient-to-r from-red-700 to-red-600 bg-clip-text text-transparent">{user.apparatus.toUpperCase()}</p>
             <p className="text-xs text-gray-600 mt-1 font-medium">Daily Equipment Inspection</p>
           </div>
 
           {/* Form */}
-          <div className="space-y-4">
+          <div className="space-y-4 stagger-fade-in">
             {/* Name Input with Autocomplete */}
             <div>
               <label htmlFor="name" className="block text-sm font-bold text-gray-800 mb-2">
@@ -448,7 +448,7 @@ export const LoginScreen: React.FC = () => {
             {/* Start Button */}
             <Button
               onClick={handleStartInspection}
-              className="w-full mt-6 h-14 text-lg font-bold shadow-xl hover:shadow-2xl transition-all rounded-xl bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900"
+              className="w-full mt-6 h-14 text-lg font-bold shadow-xl hover:shadow-2xl transition-all rounded-xl bg-gradient-to-r from-blue-700 to-blue-800 hover:from-blue-800 hover:to-blue-900 haptic-medium btn-press"
               size="lg"
             >
               Start Inspection →
