@@ -6,6 +6,11 @@ import type { Apparatus } from '../types';
 export const WORKER_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev';
 
 /**
+ * API base URL (derives from WORKER_URL for consistency)
+ */
+export const API_BASE_URL = `${WORKER_URL}/api`;
+
+/**
  * Feature flag for dynamic forms management
  * Set to false initially for safe rollout
  * When enabled, forms are loaded from D1 database instead of static JSON files

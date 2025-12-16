@@ -1,8 +1,5 @@
 import type { Defect, GitHubIssue, InspectionSubmission, EmailConfig } from '../types';
-import { APPARATUS_LIST, LABELS, DEFECT_TITLE_REGEX } from './config';
-
-// Cloudflare Workers API endpoint
-const API_BASE_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
+import { APPARATUS_LIST, LABELS, DEFECT_TITLE_REGEX, API_BASE_URL } from './config';
 
 class GitHubService {
   private adminPassword: string | null = null;
