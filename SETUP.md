@@ -145,3 +145,80 @@ Admins can view and resolve defects:
 ## Support
 
 For technical issues, contact the repository administrator or file an issue on GitHub.
+
+---
+
+## Cloudflare Worker Secrets Configuration
+
+After deploying the Cloudflare Worker, you MUST configure the following secrets via wrangler CLI:
+
+### Critical Secrets (Required for Basic Functionality)
+
+```bash
+cd worker/mbfd-github-proxy
+
+# Admin Dashboard Access (REQUIRED)
+wrangler secret put ADMIN_PASSWORD
+# Enter a strong password when prompted
+
+# GitHub API Integration (REQUIRED)
+wrangler secret put GITHUB_TOKEN
+# Enter GitHub Personal Access Token with repo scope
+```
+
+### Google Integrations (Required for Sheets/Gmail)
+
+```bash
+# Gmail OAuth (for email notifications)
+wrangler secret put GMAIL_CLIENT_ID
+wrangler secret put GMAIL_CLIENT_SECRET
+wrangler secret put GMAIL_REFRESH_TOKEN
+wrangler secret put GMAIL_SENDER_EMAIL
+
+# Google Sheets Service Account (for inventory/apparatus tracking)
+wrangler secret put GOOGLE_SA_KEY
+# Paste entire service account JSON as a single line
+
+wrangler secret put GOOGLE_SHEET_ID
+# Inventory spreadsheet ID from URL
+
+wrangler secret put APPARATUS_STATUS_SHEET_ID
+# (Optional) Separate apparatus status spreadsheet ID
+```
+
+### Verification
+
+```bash
+# List all configured secrets (does not show values)
+wrangler secret list
+
+# Test health endpoint
+curl https://mbfd-github-proxy.pdarleyjr.workers.dev/health
+# Should return: { "adminPasswordConfigured": true, "emailConfigured": true, ... }
+```
+
+### Security Notes
+
+- Secrets are encrypted at rest in Cloudflare
+- Never commit secrets to version control
+- Rotate secrets periodically (especially after personnel changes)
+- Use strong, unique passwords for ADMIN_PASSWORD
+- Service account keys should have minimal scopes (Sheets API only)
+
+### Gmail OAuth Setup
+
+To obtain Gmail OAuth credentials:
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create/select project
+3. Enable Gmail API
+4. Create OAuth 2.0 Client ID (Desktop app type)
+5. Use OAuth playground or custom script to obtain refresh token
+6. Store client_id, client_secret, and refresh_token as Worker secrets
+
+### Google Sheets Service Account Setup
+
+1. In Google Cloud Console, create Service Account
+2. Grant "Editor" permissions to Sheets API scope
+3. Download JSON key file
+4. Share your Google Sheets with the service account email
+5. Stringify JSON and store as `GOOGLE_SA_KEY` secret
