@@ -58,9 +58,6 @@ export const AdminDashboard: React.FC = () => {
 
   // Inventory notification state
   const [unseenInventoryCount, setUnseenInventoryCount] = useState(0);
-  
-  // Global notification badge state
-  const [totalUnreadNotifications, setTotalUnreadNotifications] = useState(0);
 
   // Photo lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
@@ -79,12 +76,6 @@ export const AdminDashboard: React.FC = () => {
 
   // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // Update total unread notifications
-  useEffect(() => {
-    const total = unseenInventoryCount + criticalAlertsCount + defects.length;
-    setTotalUnreadNotifications(total);
-  }, [unseenInventoryCount, criticalAlertsCount, defects.length]);
 
   const loadApparatusLogs = async (apparatus: string) => {
     try {
@@ -152,7 +143,7 @@ export const AdminDashboard: React.FC = () => {
       } catch (err) {
         console.error('Error fetching unseen inventory count:', err);
       }
-      
+
       // Load inspection logs for history
       try {
         const logs = await githubService.getInspectionLogs(30);
@@ -401,7 +392,7 @@ export const AdminDashboard: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -1165,7 +1156,7 @@ export const AdminDashboard: React.FC = () => {
 
             {isLoadingConfig ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p className="text-gray-600">Loading configuration...</p>
               </div>
             ) : emailConfig ? (
@@ -1337,29 +1328,6 @@ export const AdminDashboard: React.FC = () => {
                     <p className="text-sm text-gray-500 mt-2">
                       Current: {emailConfig.daily_email_hard_cap} / Recommended: 250
                     </p>
-                  </CardContent>
-                </Card>
-
-                {/* Email Subject Template */}
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Email Subject Template</h3>
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={emailConfig.email_subject_template}
-                        onChange={(e) => setEmailConfig({ ...emailConfig, email_subject_template: (e.target as any).value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="MBFD Daily Inspection Summary - {date}"
-                      />
-                      <p className="text-sm text-gray-500">Use {'{date}'} for the current date</p>
-                      <Button
-                        onClick={() => saveEmailConfig({ email_subject_template: emailConfig.email_subject_template })}
-                        disabled={isSavingConfig}
-                      >
-                        Save Template
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
               </div>
