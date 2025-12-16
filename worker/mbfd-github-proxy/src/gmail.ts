@@ -5,6 +5,8 @@
  * Uses refresh token to obtain short-lived access tokens
  */
 
+import { fetchWithRetry } from './retry-helper';
+
 interface GmailTokenResponse {
   access_token: string;
   expires_in: number;
@@ -30,12 +32,15 @@ export async function getGmailAccessToken(env: Env): Promise<string> {
   });
 
   try {
-    const response = await fetch(tokenUrl, {
+    const response = await fetchWithRetry(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: body.toString()
+    }, {
+      maxRetries: 3,
+      initialDelayMs: 200,
     });
 
     if (!response.ok) {
@@ -102,13 +107,17 @@ export async function sendGmailMessage(
 
     // Send via Gmail API
     const sendUrl = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
-    const response = await fetch(sendUrl, {
+    const response = await fetchWithRetry(sendUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ raw: encodedMessage })
+    }, {
+      maxRetries: 3,
+      initialDelayMs: 200,
+      retryableStatuses: [429, 500, 502, 503, 504],
     });
 
     if (!response.ok) {

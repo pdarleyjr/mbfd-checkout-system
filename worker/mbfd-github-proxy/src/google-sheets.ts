@@ -6,6 +6,7 @@
  */
 
 import { Env } from './index';
+import { fetchWithRetry } from './retry-helper';
 
 // Google OAuth2 token endpoint
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -225,11 +226,15 @@ export async function readSheet(
   
   const url = `${SHEETS_API_BASE}/${spreadsheetId}/values/${encodeURIComponent(range)}`;
   
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/json',
     },
+  }, {
+    maxRetries: 3,
+    initialDelayMs: 200,
+    retryableStatuses: [429, 500, 502, 503, 504], // Include 429 for rate limits
   });
 
   if (!response.ok) {
@@ -254,7 +259,7 @@ export async function writeSheet(
   
   const url = `${SHEETS_API_BASE}/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`;
   
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -263,6 +268,10 @@ export async function writeSheet(
     body: JSON.stringify({
       values: values,
     }),
+  }, {
+    maxRetries: 3,
+    initialDelayMs: 200,
+    retryableStatuses: [429, 500, 502, 503, 504],
   });
 
   if (!response.ok) {
@@ -294,11 +303,15 @@ export async function getSheetTabs(
   
   const url = `${SHEETS_API_BASE}/${spreadsheetId}`;
   
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/json',
     },
+  }, {
+    maxRetries: 3,
+    initialDelayMs: 200,
+    retryableStatuses: [429, 500, 502, 503, 504],
   });
 
   if (!response.ok) {
