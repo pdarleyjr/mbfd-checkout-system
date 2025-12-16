@@ -408,7 +408,7 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - Responsive and Modern */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b border-blue-700 shadow-xl sticky top-0 z-50">
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b border-blue-700 shadow-xl sticky top-0 z-50 pt-safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">  
             <div className="flex items-center gap-3 min-w-0">
@@ -1375,23 +1375,17 @@ const TabButton: React.FC<TabButtonProps> = ({ icon: Icon, label, badge, badgeCo
   return (
     <button
       onClick={onClick}
-      className={`
-        flex items-center gap-2 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 font-semibold
-        transition-all whitespace-nowrap relative flex-shrink-0 text-sm sm:text-base
-        ${isActive
+      className={`flex items-center gap-2 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 font-semibold transition-all whitespace-nowrap relative flex-shrink-0 text-sm sm:text-base ${
+        isActive
           ? 'text-white border-b-2 border-white bg-white/10'
           : 'text-blue-200 hover:text-white hover:bg-white/5'
-        }
-      `}
+      }`}
     >
       <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
       <span className="hidden sm:inline">{label}</span>
       <span className="sm:hidden">{mobileLabel}</span>
       {badge !== undefined && badge > 0 && (
-        <span className={`
-          ${badgeColor === 'red' ? 'bg-red-500' : 'bg-yellow-500'}
-          text-white text-xs px-2 py-0.5 rounded-full font-bold min-w-[20px] text-center
-        `}>
+        <span className={`${badgeColor === 'red' ? 'bg-red-500' : 'bg-yellow-500'} text-white text-xs px-2 py-0.5 rounded-full font-bold min-w-[20px] text-center`}>
           {badge}
         </span>
       )}
