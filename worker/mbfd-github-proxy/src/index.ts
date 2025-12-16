@@ -166,17 +166,8 @@ export default {
       );
     }
 
-    // Check if admin password is configured
-    if (!env.ADMIN_PASSWORD) {
-      console.error('ADMIN_PASSWORD environment variable is not set');
-      return jsonResponse(
-        { 
-          error: 'Server configuration error', 
-          message: 'Admin password not configured. Please set ADMIN_PASSWORD in Cloudflare Worker settings.' 
-        },
-        { status: 500 }
-      );
-    }
+    // Check if admin password is configured only when needed
+    // Rest of password checking is in the isAdminEndpoint block below
 
     // Check if this is an admin-only endpoint
     const labelsParam = url.searchParams.get('labels') || '';
@@ -190,6 +181,18 @@ export default {
                             (path === '/api/issues' && request.method === 'GET' && !hasApparatusFilter);
     
     if (isAdminEndpoint) {
+      // Check if admin password is configured
+      if (!env.ADMIN_PASSWORD) {
+        console.error('ADMIN_PASSWORD environment variable is not set');
+        return jsonResponse(
+          { 
+            error: 'Server configuration error', 
+            message: 'Admin password not configured. Please set ADMIN_PASSWORD in Cloudflare Worker settings.' 
+          },
+          { status: 500 }
+        );
+      }
+
       // Verify admin password from request header
       const password = request.headers.get('X-Admin-Password');
       if (password !== env.ADMIN_PASSWORD) {
@@ -354,7 +357,7 @@ export default {
 
     // Update form template (admin only)
     const updateFormMatch = path.match(/^\/api\/forms\/(.+)$/);
-    if (updateFormMatch && request.method === 'PUT' && !updateFormMatch[1].includes('/')) {
+    if (updateFormMatch && request.method ===  'PUT' && !updateFormMatch[1].includes('/')) {
       const templateId = decodeURIComponent(updateFormMatch[1]);
       return await handleUpdateForm(request, env, corsHeaders, templateId);
     }
