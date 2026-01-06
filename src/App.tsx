@@ -1,15 +1,14 @@
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 
 // Lazy load route components for code splitting
-const LoginScreen = lazy(() => import('./components/LoginScreen').then(m => ({ default: m.LoginScreen })));
-const InspectionWizard = lazy(() => import('./components/InspectionWizard').then(m => ({ default: m.InspectionWizard })));
-const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const HomePage = lazy(() => import('./components/HomePage'));
 const ICS212Form = lazy(() => import('./components/ICS212Form'));
+const ICS212AdminDashboard = lazy(() => import('./components/admin/ICS212AdminDashboard').then(m => ({ default: m.ICS212AdminDashboard })));
 
-// Create QueryClient for React Query
+// Create QueryClient for React Query  
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -32,16 +31,21 @@ const LoadingFallback = () => (
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <HashRouter>
+      <BrowserRouter>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={<LoginScreen />} />
-            <Route path="/inspection" element={<InspectionWizard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/ics212" element={<ICS212Form />} />
+            {/* Main ICS-212 Routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/form" element={<ICS212Form />} />
+            <Route path="/admin" element={<ICS212AdminDashboard />} />
+            
+            {/* Redirect old routes to new structure */}
+            <Route path="/inspection" element={<Navigate to="/form" replace />} />
+            <Route path="/ics212" element={<Navigate to="/form" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </HashRouter>
+      </BrowserRouter>
       <Toaster position="top-center" />
     </QueryClientProvider>
   );

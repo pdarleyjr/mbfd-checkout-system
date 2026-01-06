@@ -1,21 +1,21 @@
 {
-  "name": "USAR ICS-212 Vehicle Inspection System",
-  "short_name": "USAR ICS-212",
-  "description": "USAR Task Force Vehicle Safety Inspection System - ICS-212 WF Digital Forms",
-  "start_url": "/mbfd-checkout-system/",
+  "name": "ICS-212 Vehicle Safety Inspection",
+  "short_name": "ICS-212",
+  "description": "USAR Task Force Vehicle Safety Inspection System",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#1e40af",
+  "theme_color": "#2563eb",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/mbfd-checkout-system/icon-192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/mbfd-checkout-system/icon-512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -25,17 +25,17 @@
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "New ICS-212 Form",
+      "name": "New Inspection",
       "short_name": "New Form",
-      "description": "Start a new vehicle inspection",
-      "url": "/mbfd-checkout-system/#/ics212",
+      "description": "Start a new vehicle safety inspection",
+      "url": "/form",
       "icons": []
     },
     {
-      "name": "Apparatus Checkout",
-      "short_name": "Checkout",
-      "description": "Apparatus checkout inspection",
-      "url": "/mbfd-checkout-system/#/inspection",
+      "name": "Admin Dashboard",
+      "short_name": "Admin",
+      "description": "View inspection forms and analytics",
+      "url": "/admin",
       "icons": []
     }
   ]
