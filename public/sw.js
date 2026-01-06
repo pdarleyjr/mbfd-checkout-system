@@ -1,8 +1,9 @@
-const CACHE_NAME = 'mbfd-checkout-v3';
+const CACHE_NAME = 'mbfd-usar-v4';
 const urlsToCache = [
   '/mbfd-checkout-system/',
   '/mbfd-checkout-system/index.html',
   '/mbfd-checkout-system/offline.html',
+  '/mbfd-checkout-system/#/ics212',
   '/mbfd-checkout-system/data/rescue_checklist.json',
   '/mbfd-checkout-system/data/engine_checklist.json',
   '/mbfd-checkout-system/data/ladder1_checklist.json',

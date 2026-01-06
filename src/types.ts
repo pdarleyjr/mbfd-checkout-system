@@ -62,7 +62,7 @@ export interface ChecklistData {
 }
 
 // Fixed apparatus casing to match UI usage
-export type Apparatus = 
+export type Apparatus =
   | 'Engine 1' | 'Engine 2' | 'Engine 3' | 'Engine 4'
   | 'Ladder 1' | 'Ladder 3'
   | 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 4'
@@ -210,4 +210,111 @@ export interface VehicleChangeRequestResponse {
   requests: VehicleChangeRequest[];
   total: number;
   pending: number;
+}
+
+// ============================================================
+// ICS-212 VEHICLE INSPECTION FORM TYPES
+// ============================================================
+
+// Vehicle data from Airtable
+export interface Vehicle {
+  id: string;
+  vehicleId: string;
+  make?: string;
+  model?: string;
+  year?: number;
+  licensePlate?: string;
+  vin?: string;
+  status?: 'In Service' | 'Out of Service' | 'Under Repair';
+  agencyUnit?: string;
+  vehicleType?: string;
+  lastOdometer?: number;
+}
+
+// ICS-212 Inspection Item
+export interface InspectionItem {
+  itemNumber: number;
+  description: string;
+  status: 'pass' | 'fail' | 'n/a';
+  comments?: string;
+  isSafetyItem: boolean;
+  reference?: string;
+}
+
+// Digital Signature
+export interface DigitalSignature {
+  imageData: string; // Base64 PNG
+  signedAt: string; // ISO timestamp
+  signedBy: string; // Person name
+  ipAddress?: string;
+  deviceId?: string;
+}
+
+// ICS-212 Form Data
+export interface ICS212FormData {
+  // Meta
+  formId?: string;
+  status?: 'draft' | 'inspector_signed' | 'submitted' | 'approved';
+  
+  // Header Fields (Section 1)
+  incidentName: string;
+  orderNo?: string;
+  vehicleLicenseNo: string;
+  agencyRegUnit: string;
+  vehicleType: string;
+  odometerReading: number;
+  vehicleIdNo: string;
+  
+  // Inspection Items (Section 2)
+  inspectionItems: InspectionItem[];
+  
+  // Additional Comments (Section 3)
+  additionalComments?: string;
+  
+  // Release Decision (Section 4)
+  releaseStatus: 'hold' | 'release';
+  
+  // Inspector Signature (Section 5.1)
+  inspectorDate: string; // ISO date
+  inspectorTime: string; // HH:MM
+  inspectorNamePrint: string;
+  inspectorSignature?: DigitalSignature;
+  
+  // Operator Signature (Section 5.2)
+  operatorDate?: string;
+  operatorTime?: string;
+  operatorNamePrint?: string;
+  operatorSignature?: DigitalSignature;
+  
+  // System Metadata
+  submittedAt?: string;
+  createdBy?: string;
+  organizationId?: string;
+  version?: number;
+}
+
+// ICS-212 Form Submission Response
+export interface ICS212SubmissionResponse {
+  success: boolean;
+  formId: string;
+  issueNumber?: number;
+  releaseDecision: 'hold' | 'release';
+  pdfUrl?: string;
+  message?: string;
+  error?: string;
+}
+
+// Form validation result
+export interface FormValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+  warnings: string[];
+}
+
+// Draft save data
+export interface ICS212DraftData { 
+  formData: Partial<ICS212FormData>;
+  currentStep: number;
+  savedAt: string;
+  expiresAt: string;
 }

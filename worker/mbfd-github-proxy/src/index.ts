@@ -9,6 +9,7 @@
  * - Cache optimization for GET requests to reduce API calls
  * 
  * NEW: Email notification system with Gmail OAuth integration
+ * NEW: Airtable vehicle database integration for USAR ICS-212 forms
  * 
  * RATE LIMITING STRATEGY:
  * - Cloudflare Workers provides built-in DDoS protection at the edge
@@ -50,6 +51,10 @@ import {
 } from './handlers/forms';
 import { handleImageUpload, handleImageRetrieval } from './handlers/uploads';
 import { handleHealthCheck } from './handlers/health';
+import { handleVehicles } from './handlers/vehicles';
+import { handleICS212Submit } from './handlers/ics212-submit';
+import { handlePDFDownload, handlePDFPreview } from './handlers/ics212-pdf-download';
+import { handleICS212Admin } from './handlers/ics212-admin';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -65,6 +70,13 @@ export interface Env {
   GOOGLE_SHEET_ID: string;
   // Apparatus Status Sheet (separate from inventory)
   APPARATUS_STATUS_SHEET_ID?: string;
+  // Airtable vehicle database
+  AIRTABLE_API_TOKEN: string;
+  AIRTABLE_BASE_ID: string;
+  AIRTABLE_TABLE_NAME: string;
+  // R2 storage for PDFs
+  USAR_FORMS: R2Bucket;
+  R2_PUBLIC_URL: string;
   // KV namespace for configuration and queuing
   MBFD_CONFIG: KVNamespace;
   // KV namespace for image uploads
@@ -135,7 +147,8 @@ export default {
         adminPasswordConfigured: !!env.ADMIN_PASSWORD,
         cacheEnabled: true,
         emailConfigured: !!(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN),
-        kvConfigured: !!env.MBFD_CONFIG
+        kvConfigured: !!env.MBFD_CONFIG,
+        airtableConfigured: !!(env.AIRTABLE_API_TOKEN && env.AIRTABLE_BASE_ID)
       });
     }
 
@@ -365,6 +378,31 @@ export default {
     // AI Import endpoint (admin only)
     if (path === '/api/forms/import' && request.method === 'POST') {
       return await handleImportForm(request, env, corsHeaders);
+    }
+
+    // NEW: Vehicle API endpoints (USAR ICS-212 integration)
+    if (path.startsWith('/api/vehicles')) {
+      return await handleVehicles(request, env);
+    }
+
+    // NEW: ICS-212 form submission endpoint
+    if (path === '/api/ics212/submit' && request.method === 'POST') {
+      return await handleICS212Submit(request, env, corsHeaders);
+    }
+
+    // NEW: ICS-212 PDF download endpoint
+    if (path === '/api/ics212/pdf' && request.method === 'GET') {
+      return await handlePDFDownload(request, env, corsHeaders);
+    }
+
+    // NEW: ICS-212 PDF preview endpoint (inline display)
+    if (path === '/api/ics212/pdf/preview' && request.method === 'GET') {
+      return await handlePDFPreview(request, env, corsHeaders);
+    }
+
+    // NEW: ICS-212 Admin Dashboard API endpoints
+    if (path.startsWith('/api/ics212/forms') || path.startsWith('/api/ics212/analytics')) {
+      return await handleICS212Admin(request, env, corsHeaders);
     }
 
     // Route to appropriate handler
