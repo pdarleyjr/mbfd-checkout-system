@@ -1,101 +1,73 @@
-# MBFD Checkout System
+# USAR Task Force ICS-212 WF Vehicle Inspection System
 
-A serverless Progressive Web App (PWA) for the Miami Beach Fire Department's daily apparatus inspection workflow.
+**Version 1.0** | **Status**: Phase 0 - Infrastructure Setup Complete
 
-## 🚀 Live Application
+Digital ICS-212 WF (Wildland Fire) vehicle safety inspection form system for USAR operations.
 
-**URL:** https://pdarleyjr.github.io/mbfd-checkout-system/
+---
 
-## ✨ Features
+## Overview
 
-- 📱 **Mobile-First PWA** - Installable on iOS/Android devices
-- 🔄 **GitHub Issues Database** - No external database required
-- 🚒 **Multi-Apparatus Support** - Rescue 1, 2, 3, 11, and Engine 1
-- ✅ **Smart Defect Tracking** - Automatic deduplication
-- 📊 **Admin Dashboard** - Fleet status and defect management
-- 🔔 **Email Notifications** - Automatic alerts on new defects
+This system replaces paper-based USAR Task Force ICS-212 WF vehicle safety inspections with a mobile-first digital solution that maintains perfect visual fidelity to official federal forms (NFES 001251) while enabling offline operation, digital signatures, and centralized management.
 
-## 🏗️ Architecture
+### Key Features
 
-**100% Serverless** - Runs entirely on GitHub Pages:
-- **Frontend**: React 18 + TypeScript + Vite
-- **Database**: GitHub Issues (IssueOps pattern)
-- **Backend**: GitHub Actions for automation
-- **Deployment**: Automated via GitHub Actions
-- **Authentication**: Token embedded during build (no user setup required)
+- ✅ **Official ICS-212 WF Form Layout** - 99.5%+ fidelity to NFES 001251
+- ✅ **Digital Signature Capture** - Canvas-based signatures with legal metadata
+- ✅ **Dual Approval Workflow** - Inspector → Operator signature chain
+- ✅ **PDF Generation** - Pixel-perfect PDFs with 7-year retention
+- ✅ **Safety Item Validation** - Automatic HOLD/RELEASE determination
+- ✅ **Mobile-Responsive Design** - Tablet and phone optimized
+- ✅ **Offline-Capable PWA** - Works without internet connectivity
+- ✅ **GitHub Tracking** - Complete audit trail with issue tracking
+- ✅ **Email Notifications** - Automated notifications via Gmail
+- ✅ **7-Year Compliance** - Federal compliance ready
 
-## 👥 For Users (Firefighters)
+---
 
-**NO SETUP NEEDED!** Just use the app:
+## Technology Stack
 
-1. Visit https://pdarleyjr.github.io/mbfd-checkout-system/
-2. Enter your name
-3. Select your rank (Firefighter, DE, Lieutenant, Captain, Chief)
-4. Select your apparatus (Rescue 1, 2, 3, 11, or Engine 1)
-5. Click "Start Inspection"
-6. Go through each compartment marking items as:
-   - ✅ **Present/Working** (default)
-   - ❌ **Missing** (creates GitHub Issue)
-   - ⚠️ **Damaged** (creates GitHub Issue)
-7. Complete inspection - automatic log entry created
+**Frontend**:
+- React 18 + TypeScript
+- Tailwind CSS (utility-first styling)
+- PWA (Progressive Web App)
+- Vite (build tool)
 
-## 🔧 For Administrators
+**Backend**:
+- Cloudflare Workers (edge compute)
+- R2 (PDF storage with 7-year retention)
+- D1/SQLite (metadata and search)
+- KV (configuration caching)
 
-### One-Time Setup Required
+**Integrations**:
+- GitHub Issues (primary tracking + audit trail)
+- Gmail API (notifications)
+- PDFKit (official form generation)
+- Google Sheets (optional: vehicle data auto-fill)
 
-The system administrator must configure a GitHub token **ONE TIME** as a repository secret. After that, all users can use the system without any setup.
+**Infrastructure Cost**: ~$7-10/month
 
-**👉 [Read the Complete Setup Guide](./SETUP.md)**
+---
 
-Quick summary:
-1. Create a GitHub Personal Access Token (fine-grained)
-2. Add it as a repository secret named `MBFD_GITHUB_TOKEN`
-3. Push code to trigger deployment
-4. Users can now access the system!
-
-### Admin Dashboard
-
-Access at: https://pdarleyjr.github.io/mbfd-checkout-system/admin
-
-- View fleet status (all apparatus)
-- See all open defects
-- Resolve defects with notes
-- Monitor inspection history
-
-## 🔄 Deployment
-
-Deployment is **fully automated** via GitHub Actions:
-
-```bash
-# Any push to main triggers deployment
-git add .
-git commit -m "Update application"
-git push origin main
-
-# Wait 2-3 minutes for Actions to complete
-# Changes are live automatically
-```
-
-## 🛠️ Development
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 20+
-- npm or yarn
-- Git
+- Node.js 18+
+- Cloudflare account with Workers paid plan ($5/month)
+- GitHub account (FLTF2-USAR)
+- Gmail account for notifications
+- Google Cloud Project
 
-### Local Development
+### Installation
+
+See **[SETUP.md](./SETUP.md)** for detailed installation and configuration instructions.
+
+### Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/pdarleyjr/mbfd-checkout-system.git
-cd mbfd-checkout-system
-
 # Install dependencies
 npm install
-
-# Create .env.local with your test token
-echo "VITE_GITHUB_TOKEN=your_token_here" > .env.local
 
 # Start development server
 npm run dev
@@ -104,44 +76,126 @@ npm run dev
 npm run build
 ```
 
-### Tech Stack
+---
 
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **Shadcn/UI** - Component library
-- **React Router** - Navigation
-- **Octokit** - GitHub API client
-- **Lucide React** - Icons
+## Project Structure
 
-## 📋 Checklist Data
-
-The "Blue Sheet" inventory is stored in [`public/data/rescue_checklist.json`](./public/data/rescue_checklist.json)
-
-To modify the checklist:
-1. Edit the JSON file
-2. Commit and push
-3. Deployment happens automatically
-
-## 🔐 Security
-
-- Token is embedded in JavaScript bundle (visible to users)
-- Token is **scoped only** to this repository
-- Token has **read/write access only to Issues**
-- Acceptable for internal departmental use
-- For higher security, use a proper backend service
-
-## 📞 Support
-
-- **Technical Issues**: File an issue on GitHub
-- **Setup Help**: See [SETUP.md](./SETUP.md)
-- **General Questions**: Contact repository administrator
-
-## 📄 License
-
-Internal use only - Miami Beach Fire Department
+```
+usar-ics212-system/
+├── src/                          # React frontend
+│   ├── components/              # React components
+│   ├── lib/                     # Utilities and config
+│   ├── types/                   # TypeScript types
+│   └── App.tsx                  # Main application
+├── worker/                      # Cloudflare Worker
+│   └── mbfd-github-proxy/       # API Worker
+│       ├── src/                 # Worker source code
+│       ├── wrangler.jsonc       # Cloudflare configuration
+│       └── migrations/          # D1 database migrations
+├── public/                      # Static assets
+├── docs/                        # Documentation
+│   ├── CLOUDFLARE_SETUP.md     # Cloudflare configuration guide
+│   └── PHASE_0_COMPLETION.md   # Phase 0 completion summary
+└── README.md                    # This file
+```
 
 ---
 
-**Built with ❤️ for Miami Beach Fire Department**
+## Migration from MBFD
+
+This system is forked from the **MBFD Fire Apparatus Checkout System**, preserving **75% of the proven infrastructure** while adapting for ICS-212 WF requirements.
+
+### Key Changes from MBFD:
+- **Form Type**: Apparatus checkout → ICS-212 WF vehicle inspection
+- **PDF Generation**: New PDFKit-based renderer for official form
+- **Digital Signatures**: New dual-signature workflow
+- **Storage**: Added R2 bucket for PDF archival
+- **Compliance**: 7-year retention for federal requirements
+
+---
+
+## Development Roadmap
+
+### ✅ Phase 0: Infrastructure Setup (Week 1)
+- [x] Fork MBFD repository to FLTF2-USAR
+- [x] Create new workspace directory
+- [x] Configure Git with FLTF2-USAR credentials
+- [x] Repository cloned and initialized
+- [ ] Cloudflare Workers, D1, R2, KV provisioned
+- [ ] GitHub API and Gmail OAuth configured
+- [ ] Initial Worker deployed to staging
+
+### 🔄 Phase 1: Core Form MVP (Weeks 2-4)
+- [ ] Build ICS-212 form component
+- [ ] Implement 17 inspection items with validation
+- [ ] Add safety item business logic
+- [ ] Connect to Worker API
+- [ ] Create GitHub Issues for submissions
+
+### 🔄 Phase 2: PDF Generation (Weeks 5-6)
+- [ ] Integrate PDFKit library
+- [ ] Achieve 99.5%+ visual fidelity
+- [ ] Set up R2 bucket for storage
+- [ ] Generate PDFs from form data
+
+### 🔄 Phase 3: Digital Signatures (Week 7)
+- [ ] Implement signature capture component
+- [ ] Build two-stage workflow (inspector → operator)
+- [ ] Embed signatures in PDF
+
+### 🔄 Phase 4: Admin Portal (Week 8)
+- [ ] Create admin dashboard
+- [ ] Add search and filtering
+- [ ] PDF download and distribution
+
+### 🔄 Phase 5: Polish & Testing (Weeks 9-10)
+- [ ] Responsive design refinement
+- [ ] Accessibility compliance (WCAG AA)
+- [ ] Cross-browser testing
+- [ ] User acceptance testing
+
+### 🎯 Phase 6: Production Launch (Week 11)
+- [ ] Deploy to production
+- [ ] User training and documentation
+- [ ] Limited pilot rollout
+- [ ] Monitor and collect feedback
+
+---
+
+## Architecture Documentation
+
+Complete architectural analysis and implementation guides are available in the source repository:
+
+- **[ICS-212 Architectural Blueprint](../mbfd-checkout-system/usar-ics212-architecture/USAR-ICS212-ARCHITECTURAL-BLUEPRINT.md)** - Executive overview
+- **[Implementation Roadmap](../mbfd-checkout-system/usar-ics212-architecture/10-implementation-roadmap/IMPLEMENTATION-ROADMAP.md)** - 11-week plan
+- **[Step-by-Step Guide](../mbfd-checkout-system/usar-ics212-architecture/08-migration-strategy/step-by-step-guide.md)** - Detailed migration instructions
+- **[Configuration Mapping](../mbfd-checkout-system/usar-ics212-architecture/08-migration-strategy/configuration-mapping.md)** - Environment setup
+
+---
+
+## Contributing
+
+This is a private project for USAR Task Force operations. For questions or issues:
+
+1. Create a GitHub Issue
+2. Tag with appropriate labels (bug, enhancement, phase-0, etc.)
+3. Assign to project maintainer
+
+---
+
+## License
+
+MIT License - See LICENSE file for details
+
+---
+
+## Support & Contact
+
+**Repository**: https://github.com/FLTF2-USAR/usar-ics212-system  
+**Parent Project**: Forked from [mbfd-checkout-system](https://github.com/pdarleyjr/mbfd-checkout-system)  
+
+---
+
+**Document Version**: 1.0  
+**Last Updated**: 2026-01-06  
+**Status**: Phase 0 Complete - Infrastructure Ready for Development
