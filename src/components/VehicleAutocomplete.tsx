@@ -82,8 +82,8 @@ export const VehicleAutocomplete: React.FC<VehicleAutocompleteProps> = ({
   };
 
   const handleVehicleSelect = (vehicle: Vehicle) => {
-    setSearchQuery(vehicle.vehicleId);
-    onChange(vehicle.vehicleId, vehicle);
+    setSearchQuery(vehicle.regUnit || '');
+    onChange(vehicle.regUnit || '', vehicle);
     onVehicleSelect?.(vehicle);
     setIsOpen(false);
   };
@@ -97,7 +97,7 @@ export const VehicleAutocomplete: React.FC<VehicleAutocompleteProps> = ({
           value={searchQuery}
           onChange={handleInputChange}
           onFocus={() => searchQuery.length >= 2 && setIsOpen(true)}
-          placeholder="Search vehicle ID, make, or model..."
+          placeholder="Search vehicle ID, make, or type..."
           className={`
             w-full px-4 py-3 text-base rounded-xl border-2 transition-all
             focus:outline-none focus:ring-4
@@ -147,34 +147,34 @@ export const VehicleAutocomplete: React.FC<VehicleAutocompleteProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      {vehicle.vehicleId}
+                      {vehicle.regUnit}
                     </p>
-                    {(vehicle.make || vehicle.model) && (
+                    {(vehicle.vehicleMake || vehicle.vehicleType) && (
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {[vehicle.year, vehicle.make, vehicle.model]
+                        {[vehicle.vehicleMake, vehicle.vehicleType]
                           .filter(Boolean)
                           .join(' ')}
                       </p>
                     )}
-                    {vehicle.agencyUnit && (
+                    {vehicle.licenseNumber && (
                       <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                        {vehicle.agencyUnit}
+                        {vehicle.licenseNumber}
                       </p>
                     )}
                   </div>
-                  {vehicle.status && (
+                  {vehicle.vehicleStatus && (
                     <span
                       className={`
                         ml-3 px-2 py-1 text-xs font-medium rounded-full
-                        ${vehicle.status === 'In Service' 
+                        ${vehicle.vehicleStatus === 'Active' 
                           ? 'bg-green-100 text-green-800' 
-                          : vehicle.status === 'Out of Service'
+                          : vehicle.vehicleStatus === 'Inactive'
                           ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
                         }
                       `}
                     >
-                      {vehicle.status}
+                      {vehicle.vehicleStatus}
                     </span>
                   )}
                 </div>

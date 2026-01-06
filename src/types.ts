@@ -216,19 +216,22 @@ export interface VehicleChangeRequestResponse {
 // ICS-212 VEHICLE INSPECTION FORM TYPES
 // ============================================================
 
-// Vehicle data from Airtable
+// Vehicle data from Airtable - matches VehicleRecord from airtable.ts
 export interface Vehicle {
   id: string;
-  vehicleId: string;
-  make?: string;
-  model?: string;
-  year?: number;
-  licensePlate?: string;
-  vin?: string;
-  status?: 'In Service' | 'Out of Service' | 'Under Repair';
-  agencyUnit?: string;
-  vehicleType?: string;
-  lastOdometer?: number;
+  regUnit: string;
+  vehicleMake: string;
+  vehicleType: string;
+  features?: string;
+  agency?: string;
+  licenseNumber?: string;
+  vehicleId?: string;
+  incidentId?: string;
+  vehicleStatus?: 'Active' | 'Inactive' | 'Maintenance' | 'Deployed';
+  lastInspectionDate?: string;
+  nextInspectionDue?: string;
+  inspectionFrequencyDays?: number;
+  notes?: string;
 }
 
 // ICS-212 Inspection Item
@@ -317,4 +320,88 @@ export interface ICS212DraftData {
   currentStep: number;
   savedAt: string;
   expiresAt: string;
+}
+
+// ============================================================
+// ICS-218 VEHICLE/EQUIPMENT INVENTORY FORM TYPES
+// ============================================================
+
+// ICS-218 Vehicle Entry (single row in the inventory table)
+export interface ICS218VehicleEntry {
+  orderRequestNumber?: string;
+  incidentIdNo?: string;
+  classification: string;
+  make: string;
+  categoryKindType: string;
+  features?: string;
+  agencyOwner: string;
+  operatorNameContact: string;
+  vehicleLicenseId: string;
+  incidentAssignment: string;
+  startDateTime: string; // ISO 8601
+  releaseDateTime?: string; // ISO 8601
+  airtableId?: string; // Reference to source vehicle in Airtable
+}
+
+// ICS-218 Form Data
+export interface ICS218FormData {
+  // Meta
+  id: string;
+  status?: 'draft' | 'submitted';
+  
+  // Header Fields
+  incidentName: string;
+  incidentNumber: string;
+  datePrepared: string; // ISO 8601
+  timePrepared: string; // HH:MM
+  vehicleCategory: string;
+  operationalPeriod?: string;
+  
+  // Vehicle Inventory Table
+  vehicles: ICS218VehicleEntry[];
+  
+  // Footer - Prepared By
+  preparedBy: {
+    name: string;
+    positionTitle: string;
+    signature: string; // Base64 data URL
+    signatureTimestamp: string; // ISO 8601
+  };
+  
+  // System Metadata
+  submittedAt?: string;
+  submittedBy?: string;
+  createdBy?: string;
+  organizationId?: string;
+  version?: number;
+}
+
+// ICS-218 Form Submission Response
+export interface ICS218SubmissionResponse {
+  success: boolean;
+  id: string;
+  pdfUrl?: string;
+  githubIssueUrl?: string;
+  message?: string;
+  error?: string;
+}
+
+// ICS-218 Draft Data
+export interface ICS218DraftData {
+  formData: Partial<ICS218FormData>;
+  currentStep: number;
+  savedAt: string;
+  expiresAt: string;
+}
+
+// ICS-218 Password Validation
+export interface ICS218PasswordValidationRequest {
+  password: string;
+}
+
+export interface ICS218PasswordValidationResponse {
+  success: boolean;
+  token?: string;
+  expiresAt?: string;
+  error?: string;
 }

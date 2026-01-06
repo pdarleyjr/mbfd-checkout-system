@@ -4,7 +4,7 @@
  */
 
 interface AirtableConfig {
-  apiToken: string;
+  apiKey: string;
   baseId: string;
   tableName: string;
 }
@@ -49,7 +49,7 @@ export class AirtableClient {
   
   private getHeaders(): Record<string, string> {
     return {
-      'Authorization': `Bearer ${this.config.apiToken}`,
+      'Authorization': `Bearer ${this.config.apiKey}`,
       'Content-Type': 'application/json'
     };
   }
@@ -80,6 +80,12 @@ export class AirtableClient {
     try {
       await this.rateLimit();
       
+      console.log('[AIRTABLE] Fetching vehicles from table:', this.config.tableName);
+      console.log('[AIRTABLE] Base ID:', this.config.baseId);
+      if (filterByFormula) {
+        console.log('[AIRTABLE] Filter formula:', filterByFormula);
+      }
+      
       const allRecords: AirtableRecord[] = [];
       let offset: string | undefined;
       
@@ -92,24 +98,28 @@ export class AirtableClient {
           url.searchParams.append('offset', offset);
         }
         
+        console.log('[AIRTABLE] Requesting:', url.toString());
         const response = await fetch(url.toString(), {
           headers: this.getHeaders()
         });
         
         if (!response.ok) {
           const errorText = await response.text();
+          console.error('[AIRTABLE] API Error:', response.status, errorText);
           throw new Error(`Airtable API error (${response.status}): ${errorText}`);
         }
         
         const data: AirtableResponse = await response.json();
+        console.log('[AIRTABLE] Received', data.records.length, 'records');
         allRecords.push(...data.records);
         offset = data.offset;
         
       } while (offset);
       
+      console.log('[AIRTABLE] Total records fetched:', allRecords.length);
       return allRecords.map(record => this.mapAirtableToVehicle(record));
     } catch (error) {
-      console.error('Error fetching vehicles:', error);
+      console.error('[AIRTABLE] Error fetching vehicles:', error);
       throw error;
     }
   }
@@ -121,20 +131,26 @@ export class AirtableClient {
     try {
       await this.rateLimit();
       
+      console.log('[AIRTABLE] Fetching vehicle by ID:', recordId);
       const response = await fetch(`${this.getTableUrl()}/${recordId}`, {
         headers: this.getHeaders()
       });
       
       if (!response.ok) {
-        if (response.status === 404) return null;
+        if (response.status === 404) {
+          console.log('[AIRTABLE] Vehicle not found:', recordId);
+          return null;
+        }
         const errorText = await response.text();
+        console.error('[AIRTABLE] API Error:', response.status, errorText);
         throw new Error(`Airtable API error (${response.status}): ${errorText}`);
       }
       
       const data: AirtableRecord = await response.json();
+      console.log('[AIRTABLE] Successfully fetched vehicle:', recordId);
       return this.mapAirtableToVehicle(data);
     } catch (error) {
-      console.error(`Error fetching vehicle ${recordId}:`, error);
+      console.error(`[AIRTABLE] Error fetching vehicle ${recordId}:`, error);
       throw error;
     }
   }
@@ -143,6 +159,7 @@ export class AirtableClient {
    * Search vehicles by registration/unit identifier
    */
   async searchByRegUnit(regUnit: string): Promise<VehicleRecord[]> {
+    console.log('[AIRTABLE] Searching by Reg/Unit:', regUnit);
     const formula = `SEARCH(LOWER("${regUnit.toLowerCase()}"), LOWER({Reg/Unit}))`;
     return this.fetchVehicles(formula);
   }
@@ -151,6 +168,7 @@ export class AirtableClient {
    * Get vehicles by status
    */
   async getVehiclesByStatus(status: VehicleRecord['vehicleStatus']): Promise<VehicleRecord[]> {
+    console.log('[AIRTABLE] Filtering by status:', status);
     const formula = `{Vehicle Status} = "${status}"`;
     return this.fetchVehicles(formula);
   }
@@ -162,6 +180,7 @@ export class AirtableClient {
     try {
       await this.rateLimit();
       
+      console.log('[AIRTABLE] Updating vehicle:', recordId);
       const fields = this.mapVehicleToAirtable(updates);
       
       const response = await fetch(`${this.getTableUrl()}/${recordId}`, {
@@ -172,13 +191,15 @@ export class AirtableClient {
       
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('[AIRTABLE] API Error:', response.status, errorText);
         throw new Error(`Airtable API error (${response.status}): ${errorText}`);
       }
       
       const data: AirtableRecord = await response.json();
+      console.log('[AIRTABLE] Successfully updated vehicle:', recordId);
       return this.mapAirtableToVehicle(data);
     } catch (error) {
-      console.error(`Error updating vehicle ${recordId}:`, error);
+      console.error(`[AIRTABLE] Error updating vehicle ${recordId}:`, error);
       throw error;
     }
   }
@@ -190,6 +211,7 @@ export class AirtableClient {
     try {
       await this.rateLimit();
       
+      console.log('[AIRTABLE] Creating vehicle:', vehicle.regUnit);
       const fields = this.mapVehicleToAirtable(vehicle);
       
       const response = await fetch(this.getTableUrl(), {
@@ -200,13 +222,15 @@ export class AirtableClient {
       
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('[AIRTABLE] API Error:', response.status, errorText);
         throw new Error(`Airtable API error (${response.status}): ${errorText}`);
       }
       
       const data: AirtableRecord = await response.json();
+      console.log('[AIRTABLE] Successfully created vehicle:', data.id);
       return this.mapAirtableToVehicle(data);
     } catch (error) {
-      console.error('Error creating vehicle:', error);
+      console.error('[AIRTABLE] Error creating vehicle:', error);
       throw error;
     }
   }
@@ -227,6 +251,8 @@ export class AirtableClient {
           fields: this.mapVehicleToAirtable(vehicle)
         }));
         
+        console.log('[AIRTABLE] Creating batch', i / BATCH_SIZE + 1);
+        
         const response = await fetch(this.getTableUrl(), {
           method: 'POST',
           headers: this.getHeaders(),
@@ -235,13 +261,16 @@ export class AirtableClient {
         
         if (!response.ok) {
           const errorText = await response.text();
+          console.error(`[AIRTABLE] Error creating batch ${i / BATCH_SIZE + 1}:`, errorText);
           throw new Error(`Airtable API error (${response.status}): ${errorText}`);
         }
         
         const data: AirtableResponse = await response.json();
+        console.log('[AIRTABLE] Received', data.records.length, 'records in batch');
+        
         results.push(...data.records.map(record => this.mapAirtableToVehicle(record)));
       } catch (error) {
-        console.error(`Error creating batch ${i / BATCH_SIZE + 1}:`, error);
+        console.error(`[AIRTABLE] Error creating batch ${i / BATCH_SIZE + 1}:`, error);
         throw error;
       }
     }
@@ -324,8 +353,13 @@ export class AirtableClient {
  * Export factory function for Cloudflare Worker environment
  */
 export function createAirtableClient(env: any): AirtableClient {
+  console.log('[AIRTABLE] Initializing client');
+  console.log('[AIRTABLE] API Key present:', !!env.AIRTABLE_API_KEY);
+  console.log('[AIRTABLE] Base ID present:', !!env.AIRTABLE_BASE_ID);
+  console.log('[AIRTABLE] Table Name:', env.AIRTABLE_TABLE_NAME || 'Vehicles (default)');
+  
   return new AirtableClient({
-    apiToken: env.AIRTABLE_API_TOKEN,
+    apiKey: env.AIRTABLE_API_KEY,
     baseId: env.AIRTABLE_BASE_ID,
     tableName: env.AIRTABLE_TABLE_NAME || 'Vehicles'
   });

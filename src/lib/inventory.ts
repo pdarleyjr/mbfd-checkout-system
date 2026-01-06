@@ -4,7 +4,9 @@
  * This module provides functions to interact with the inventory and task management endpoints.
  */
 
-const API_BASE = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
+import { WORKER_URL } from './config';
+
+const API_BASE = `${WORKER_URL}/api`;
 
 /**
  * Get headers for API requests including admin authentication

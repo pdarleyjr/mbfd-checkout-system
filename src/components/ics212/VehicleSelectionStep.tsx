@@ -24,10 +24,10 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
   const handleVehicleSelect = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     // Auto-populate vehicle fields
-    onChange('vehicleIdNo', vehicle.vehicleId);
-    onChange('vehicleLicenseNo', vehicle.licensePlate || '');
+    onChange('vehicleIdNo', vehicle.vehicleId || '');
+    onChange('vehicleLicenseNo', vehicle.licenseNumber || '');
     onChange('vehicleType', vehicle.vehicleType || '');
-    onChange('agencyRegUnit', vehicle.agencyUnit || '');
+    onChange('agencyRegUnit', vehicle.regUnit || '');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -83,9 +83,9 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
           </h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-gray-600 dark:text-gray-400">Make/Model</p>
+              <p className="text-gray-600 dark:text-gray-400">Make/Type</p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {[selectedVehicle.year, selectedVehicle.make, selectedVehicle.model]
+                {[selectedVehicle.vehicleMake, selectedVehicle.vehicleType]
                   .filter(Boolean)
                   .join(' ') || 'N/A'}
               </p>
@@ -93,13 +93,13 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
             <div>
               <p className="text-gray-600 dark:text-gray-400">License Plate</p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {selectedVehicle.licensePlate || 'N/A'}
+                {selectedVehicle.licenseNumber || 'N/A'}
               </p>
             </div>
             <div>
               <p className="text-gray-600 dark:text-gray-400">Agency Unit</p>
               <p className="font-semibold text-gray-900 dark:text-white">
-                {selectedVehicle.agencyUnit || 'N/A'}
+                {selectedVehicle.regUnit || 'N/A'}
               </p>
             </div>
             <div>
@@ -107,15 +107,15 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
               <span
                 className={`
                   inline-block px-2 py-1 text-xs font-medium rounded-full
-                  ${selectedVehicle.status === 'In Service' 
+                  ${selectedVehicle.vehicleStatus === 'Active' 
                     ? 'bg-green-100 text-green-800' 
-                    : selectedVehicle.status === 'Out of Service'
+                    : selectedVehicle.vehicleStatus === 'Inactive'
                     ? 'bg-red-100 text-red-800'
                     : 'bg-yellow-100 text-yellow-800'
                   }
                 `}
               >
-                {selectedVehicle.status || 'Unknown'}
+                {selectedVehicle.vehicleStatus || 'Unknown'}
               </span>
             </div>
           </div>
@@ -150,11 +150,6 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
         />
         {errors.odometerReading && (
           <p className="mt-1 text-sm text-red-600">{errors.odometerReading}</p>
-        )}
-        {selectedVehicle?.lastOdometer && (
-          <p className="mt-1 text-xs text-gray-500">
-            Last recorded: {selectedVehicle.lastOdometer.toLocaleString()} miles
-          </p>
         )}
       </div>
 

@@ -1,11 +1,12 @@
 /**
  * Forms List Component
  * 
- * Displays ICS-212 forms with real-time search, filtering, and pagination
+ * Displays ICS-212 and ICS-218 forms with real-time search, filtering, and pagination
  * Features:
  * - Mobile-responsive card/list layout
+ * - Form type filter (All, ICS 212, ICS 218)
  * - Real-time search across vehicle ID, incident name, inspector
- * - Filter by status (HOLD/RELEASED), date range, vehicle
+ * - Filter by status (HOLD/RELEASED for ICS 212)
  * - Swipeable list items with quick actions
  * - Pull-to-refresh
  * - Infinite scroll pagination
@@ -19,7 +20,8 @@ import { TouchFeedback } from '../mobile/TouchFeedback';
 import { Toast, showToast } from '../mobile/Toast';
 import { BottomSheet } from '../mobile/BottomSheet';
 import { FormDetail } from './FormDetail';
-import { API_BASE_URL } from '../../lib/config';
+import { ICS218Detail } from './ICS218Detail';
+import { API_BASE_URL, API_ENDPOINTS } from '../../lib/config';
 
 interface ICS212Form {
   id: number;
@@ -36,55 +38,96 @@ interface ICS212Form {
   created_at: string;
   pass_count?: number;
   fail_count?: number;
+  formType: 'ICS212';
 }
 
-interface FormsListResponse {
-  forms: ICS212Form[];
-  total: number;
-  page: number;
-  pages: number;
+interface ICS218Form {
+  id: string;
+  incident_name: string;
+  incident_number: string;
+  date_prepared: string;
+  time_prepared: string;
+  vehicle_category: string;
+  prepared_by_name: string;
+  pdf_url?: string;
+  github_issue_number?: number;
+  created_at: string;
+  vehicleCount: number;
+  formType: 'ICS218';
 }
+
+type UnifiedForm = ICS212Form | ICS218Form;
 
 export function FormsList() {
-  const [forms, setForms] = useState<ICS212Form[]>([]);
+  const [forms, setForms] = useState<UnifiedForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [formTypeFilter, setFormTypeFilter] = useState<'all' | 'ICS212' | 'ICS218'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'hold' | 'release'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  const [selectedFormType, setSelectedFormType] = useState<'ICS212' | 'ICS218' | null>(null);
 
   const fetchForms = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     if (!append) setLoading(true);
 
     try {
-      const params = new URLSearchParams({
-        page: pageNum.toString(),
-        limit: '20',
-        sortBy: 'date',
-        sortOrder: 'desc',
-      });
-
-      if (searchTerm) params.set('search', searchTerm);
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      if (dateFrom) params.set('from', dateFrom);
-      if (dateTo) params.set('to', dateTo);
-
-      const response = await fetch(`${API_BASE_URL}/ics212/forms?${params}`);
-
-      if (!response.ok) throw new Error('Failed to fetch forms');
-
-      const data: FormsListResponse = await response.json();
+      const promises: Promise<any>[] = [];
       
-      if (append) {
-        setForms(prev => [...prev, ...data.forms]);
-      } else {
-        setForms(data.forms);
+      // Fetch ICS 212 forms if needed
+      if (formTypeFilter === 'all' || formTypeFilter === 'ICS212') {
+        const params = new URLSearchParams({
+          page: pageNum.toString(),
+          limit: '20',
+          sortBy: 'date',
+          sortOrder: 'desc',
+        });
+
+        if (searchTerm) params.set('search', searchTerm);
+        if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (dateFrom) params.set('from', dateFrom);
+        if (dateTo) params.set('to', dateTo);
+
+        promises.push(
+          fetch(`${API_BASE_URL}/ics212/forms?${params}`)
+            .then(r => r.ok ? r.json() : { forms: [] })
+            .then(data => data.forms.map((f: ICS212Form) => ({ ...f, formType: 'ICS212' as const })))
+        );
       }
       
-      setTotalPages(data.pages);
+      // Fetch ICS 218 forms if needed
+      if (formTypeFilter === 'all' || formTypeFilter === 'ICS218') {
+        const params = new URLSearchParams({
+          limit: '20',
+          offset: ((pageNum - 1) * 20).toString(),
+        });
+
+        if (searchTerm) params.set('incident', searchTerm);
+
+        promises.push(
+          fetch(`${API_ENDPOINTS.ics218Forms}?${params}`)
+            .then(r => r.ok ? r.json() : { forms: [] })
+            .then(data => data.forms.map((f: any) => ({ ...f, formType: 'ICS218' as const })))
+        );
+      }
+
+      const results = await Promise.all(promises);
+      const allForms = results.flat();
+      
+      // Sort by created_at date
+      allForms.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      if (append) {
+        setForms(prev => [...prev, ...allForms]);
+      } else {
+        setForms(allForms);
+      }
+      
+      // For simplicity, set totalPages based on result count
+      setTotalPages(allForms.length >= 20 ? pageNum + 1 : pageNum);
       setPage(pageNum);
     } catch (error) {
       console.error('Error fetching forms:', error);
@@ -92,11 +135,11 @@ export function FormsList() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statusFilter, dateFrom, dateTo]);
+  }, [searchTerm, formTypeFilter, statusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchForms(1, false);
-  }, [searchTerm, statusFilter, dateFrom, dateTo]);
+  }, [searchTerm, formTypeFilter, statusFilter, dateFrom, dateTo]);
 
   const handleRefresh = async () => {
     await fetchForms(1, false);
@@ -108,7 +151,7 @@ export function FormsList() {
     }
   };
 
-  const handleDownloadPDF = async (form: ICS212Form) => {
+  const handleDownloadPDF = async (form: UnifiedForm) => {
     if (!form.pdf_url) {
       showToast({ message: 'PDF not available', type: 'error' });
       return;
@@ -116,8 +159,24 @@ export function FormsList() {
     window.open(form.pdf_url, '_blank');
   };
 
-  const handleViewForm = (formId: string) => {
+  const handleViewForm = (formId: string, formType: 'ICS212' | 'ICS218') => {
     setSelectedFormId(formId);
+    setSelectedFormType(formType);
+  };
+
+  const getFormTypeBadge = (formType: 'ICS212' | 'ICS218') => {
+    if (formType === 'ICS212') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          ICS 212
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+        ICS 218
+      </span>
+    );
   };
 
   const getStatusBadge = (status: 'hold' | 'release') => {
@@ -150,45 +209,97 @@ export function FormsList() {
           />
         </div>
 
-        { /* Filter Pills */}
-        <div className="flex flex-wrap gap-2">
-          <TouchFeedback>
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                statusFilter === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-            >
-              All
-            </button>
-          </TouchFeedback>
-          <TouchFeedback>
-            <button
-              onClick={() => setStatusFilter('hold')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                statusFilter === 'hold'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-            >
-              HOLD
-            </button>
-          </TouchFeedback>
-          <TouchFeedback>
-            <button
-              onClick={() => setStatusFilter('release')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                statusFilter === 'release'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-              }`}
-            >
-              RELEASED
-            </button>
-          </TouchFeedback>
+        {/* Form Type Filter Pills */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Form Type
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <TouchFeedback>
+              <button
+                onClick={() => setFormTypeFilter('all')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  formTypeFilter === 'all'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                All Forms
+              </button>
+            </TouchFeedback>
+            <TouchFeedback>
+              <button
+                onClick={() => setFormTypeFilter('ICS212')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  formTypeFilter === 'ICS212'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                ICS 212
+              </button>
+            </TouchFeedback>
+            <TouchFeedback>
+              <button
+                onClick={() => setFormTypeFilter('ICS218')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  formTypeFilter === 'ICS218'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                ICS 218
+              </button>
+            </TouchFeedback>
+          </div>
         </div>
+
+        {/* Status Filter (ICS 212 only) */}
+        {(formTypeFilter === 'all' || formTypeFilter === 'ICS212') && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Status (ICS 212)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <TouchFeedback>
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    statusFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  All
+                </button>
+              </TouchFeedback>
+              <TouchFeedback>
+                <button
+                  onClick={() => setStatusFilter('hold')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    statusFilter === 'hold'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  HOLD
+                </button>
+              </TouchFeedback>
+              <TouchFeedback>
+                <button
+                  onClick={() => setStatusFilter('release')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    statusFilter === 'release'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  RELEASED
+                </button>
+              </TouchFeedback>
+            </div>
+          </div>
+        )}
 
         {/* Date Range Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -247,11 +358,14 @@ export function FormsList() {
             // Forms list
             forms.map((form) => (
               <SwipeableListItem
-                key={form.id}
+                key={`${form.formType}-${form.id}`}
                 leftAction={{
                   label: 'View',
                   color: '#3b82f6',
-                  onTrigger: () => handleViewForm(form.form_id)
+                  onTrigger: () => handleViewForm(
+                    form.formType === 'ICS212' ? (form as ICS212Form).form_id : (form as ICS218Form).id,
+                    form.formType
+                  )
                 }}
                 rightAction={{
                   label: 'Download',
@@ -261,32 +375,56 @@ export function FormsList() {
               >
                 <TouchFeedback>
                   <div
-                    onClick={() => handleViewForm(form.form_id)}
+                    onClick={() => handleViewForm(
+                      form.formType === 'ICS212' ? (form as ICS212Form).form_id : (form as ICS218Form).id,
+                      form.formType
+                    )}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        {/* Vehicle ID - Primary */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                            {form.vehicle_id_no}
-                          </h3>
-                          {getStatusBadge(form.release_decision)}
+                        {/* Form Type Badge and Primary Info */}
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {getFormTypeBadge(form.formType)}
+                          {form.formType === 'ICS212' && (
+                            <>
+                              <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                                {(form as ICS212Form).vehicle_id_no}
+                              </h3>
+                              {getStatusBadge((form as ICS212Form).release_decision)}
+                            </>
+                          )}
+                          {form.formType === 'ICS218' && (
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                              {(form as ICS218Form).incident_name}
+                            </h3>
+                          )}
                         </div>
 
-                        {/* Incident Name */}
+                        {/* Incident Name / Secondary Info */}
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 truncate">
-                          {form.incident_name}
+                          {form.formType === 'ICS212' ? (form as ICS212Form).incident_name : (form as ICS218Form).vehicle_category}
                         </p>
 
                         {/* Meta Info */}
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                          <span>🔍 {form.inspector_name_print}</span>
-                          <span>📅 {new Date(form.inspector_date).toLocaleDateString()}</span>
-                          {form.pass_count !== undefined && form.fail_count !== undefined && (
-                            <span>
-                              ✅ {form.pass_count} / ❌ {form.fail_count}
-                            </span>
+                          {form.formType === 'ICS212' && (
+                            <>
+                              <span>🔍 {(form as ICS212Form).inspector_name_print}</span>
+                              <span>📅 {new Date((form as ICS212Form).inspector_date).toLocaleDateString()}</span>
+                              {(form as ICS212Form).pass_count !== undefined && (form as ICS212Form).fail_count !== undefined && (
+                                <span>
+                                  ✅ {(form as ICS212Form).pass_count} / ❌ {(form as ICS212Form).fail_count}
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {form.formType === 'ICS218' && (
+                            <>
+                              <span>👤 {(form as ICS218Form).prepared_by_name}</span>
+                              <span>📅 {new Date((form as ICS218Form).date_prepared).toLocaleDateString()}</span>
+                              <span>🚗 {(form as ICS218Form).vehicleCount} vehicle{(form as ICS218Form).vehicleCount !== 1 ? 's' : ''}</span>
+                            </>
                           )}
                         </div>
                       </div>
@@ -324,13 +462,17 @@ export function FormsList() {
       </PullToRefresh>
 
       {/* Form Detail Bottom Sheet */}
-      {selectedFormId && (
+      {selectedFormId && selectedFormType && (
         <BottomSheet
           isOpen={!!selectedFormId}
-          onClose={() => setSelectedFormId(null)}
+          onClose={() => {
+            setSelectedFormId(null);
+            setSelectedFormType(null);
+          }}
           title="Form Details"
         >
-          <FormDetail formId={selectedFormId} />
+          {selectedFormType === 'ICS212' && <FormDetail formId={selectedFormId} />}
+          {selectedFormType === 'ICS218' && <ICS218Detail formId={selectedFormId} />}
         </BottomSheet>
       )}
 

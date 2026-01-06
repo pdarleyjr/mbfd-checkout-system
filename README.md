@@ -1,27 +1,71 @@
-# USAR Task Force ICS-212 WF Vehicle Inspection System
+# USAR ICS-212 & ICS-218 Forms System
 
-**Version 1.0** | **Status**: Phase 0 - Infrastructure Setup Complete
+**Version 2.0** | **Status**: ✅ Production Deployed
 
-Digital ICS-212 WF (Wildland Fire) vehicle safety inspection form system for USAR operations.
+Digital ICS-212 (Vehicle Safety Inspection) and ICS-218 (Support Vehicle/Equipment Log) forms system for USAR operations.
 
 ---
 
 ## Overview
 
-This system replaces paper-based USAR Task Force ICS-212 WF vehicle safety inspections with a mobile-first digital solution that maintains perfect visual fidelity to official federal forms (NFES 001251) while enabling offline operation, digital signatures, and centralized management.
+This system provides a comprehensive digital solution for USAR operations, supporting both **ICS-212 WF** (Wildland Fire) vehicle safety inspections and **ICS-218** support vehicle/equipment tracking. The system replaces paper-based forms with a mobile-first digital solution that maintains perfect visual fidelity to official federal forms while enabling offline operation, digital signatures, and centralized management.
 
 ### Key Features
 
+#### ICS-212 Vehicle Safety Inspection
 - ✅ **Official ICS-212 WF Form Layout** - 99.5%+ fidelity to NFES 001251
 - ✅ **Digital Signature Capture** - Canvas-based signatures with legal metadata
 - ✅ **Dual Approval Workflow** - Inspector → Operator signature chain
 - ✅ **PDF Generation** - Pixel-perfect PDFs with 7-year retention
 - ✅ **Safety Item Validation** - Automatic HOLD/RELEASE determination
+- ✅ **GitHub Tracking** - Complete audit trail with issue tracking
+
+#### ICS-218 Support Vehicle/Equipment Log (NEW)
+- ✅ **Password-Protected Access** - Secure form submissions
+- ✅ **Multi-Vehicle Support** - Track unlimited vehicles per incident
+- ✅ **Airtable Integration** - 7-field auto-population from vehicle database
+- ✅ **Official ICS-218 Format** - PDF matching federal form standards
+- ✅ **Digital Signatures** - Prepared by signature with timestamp
+- ✅ **GitHub Issue Creation** - Complete tracking for each submission
+- ✅ **Vehicle Categories** - Ambulance, Buses, Helicopters, Construction Equipment, etc.
+
+#### Admin Dashboard
+- ✅ **Unified Form Management** - View both ICS-212 and ICS-218 forms
+- ✅ **Form Type Filtering** - Filter by All/ICS 212/ICS 218
+- ✅ **Combined Analytics** - Statistics and trends for both form types
+- ✅ **PDF Downloads** - Instant access to generated PDFs
+- ✅ **GitHub Integration** - Direct links to tracking issues
+- ✅ **Mobile-Responsive** - Tablet and phone optimized
+
+#### Universal Features
 - ✅ **Mobile-Responsive Design** - Tablet and phone optimized
 - ✅ **Offline-Capable PWA** - Works without internet connectivity
-- ✅ **GitHub Tracking** - Complete audit trail with issue tracking
 - ✅ **Email Notifications** - Automated notifications via Gmail
 - ✅ **7-Year Compliance** - Federal compliance ready
+
+---
+
+## 🚀 Live Deployment
+
+### Production URLs
+
+- **Frontend**: https://pdarleyjr.github.io/usar-ics212-system
+- **Backend API**: https://usar-ics212.pdarleyjr.workers.dev
+- **GitHub**: https://github.com/pdarleyjr/mbfd-checkout-system
+
+### Access Credentials
+
+#### ICS-212 Form (Public Access)
+- **URL**: https://pdarleyjr.github.io/usar-ics212-system/form
+- **Access**: No password required
+
+#### ICS-218 Form (Password Protected)
+- **URL**: https://pdarleyjr.github.io/usar-ics212-system/ics218
+- **Password**: `ICS218Deploy2026!`
+
+#### Admin Dashboard
+- **URL**: https://pdarleyjr.github.io/usar-ics212-system/admin
+- **Password**: `AdminPass2026!`
 
 ---
 
@@ -32,6 +76,7 @@ This system replaces paper-based USAR Task Force ICS-212 WF vehicle safety inspe
 - Tailwind CSS (utility-first styling)
 - PWA (Progressive Web App)
 - Vite (build tool)
+- React Router v6
 
 **Backend**:
 - Cloudflare Workers (edge compute)
@@ -41,9 +86,9 @@ This system replaces paper-based USAR Task Force ICS-212 WF vehicle safety inspe
 
 **Integrations**:
 - GitHub Issues (primary tracking + audit trail)
+- Airtable API (vehicle data auto-fill)
 - Gmail API (notifications)
 - PDFKit (official form generation)
-- Google Sheets (optional: vehicle data auto-fill)
 
 **Infrastructure Cost**: ~$7-10/month
 
@@ -55,9 +100,9 @@ This system replaces paper-based USAR Task Force ICS-212 WF vehicle safety inspe
 
 - Node.js 18+
 - Cloudflare account with Workers paid plan ($5/month)
-- GitHub account (FLTF2-USAR)
+- GitHub account
 - Gmail account for notifications
-- Google Cloud Project
+- Airtable account for vehicle data
 
 ### Installation
 
@@ -74,6 +119,10 @@ npm run dev
 
 # Build for production
 npm run build
+
+# Deploy worker
+cd worker/mbfd-github-proxy
+npx wrangler deploy
 ```
 
 ---
@@ -83,93 +132,142 @@ npm run build
 ```
 usar-ics212-system/
 ├── src/                          # React frontend
-│   ├── components/              # React components
+│   ├── components/
+│   │   ├── ics212/              # ICS-212 form components
+│   │   ├── ics218/              # ICS-218 form components (NEW)
+│   │   ├── admin/               # Admin dashboard (UPDATED)
+│   │   └── mobile/              # Mobile UI components
 │   ├── lib/                     # Utilities and config
-│   ├── types/                   # TypeScript types
 │   └── App.tsx                  # Main application
 ├── worker/                      # Cloudflare Worker
-│   └── mbfd-github-proxy/       # API Worker
-│       ├── src/                 # Worker source code
-│       ├── wrangler.jsonc       # Cloudflare configuration
-│       └── migrations/          # D1 database migrations
-├── public/                      # Static assets
+│   └── mbfd-github-proxy/
+│       ├── src/
+│       │   ├── handlers/        # API route handlers
+│       │   │   ├── ics212-*.ts  # ICS-212 handlers
+│       │   │   └── ics218-*.ts  # ICS-218 handlers (NEW)
+│       │   ├── pdf/             # PDF generators
+│       │   │   ├── ics212-generator.ts
+│       │   │   └── ics218-generator.ts (NEW)
+│       │   └── integrations/
+│       │       ├── airtable.ts  # Vehicle data integration
+│       │       └── github-ics218.ts (NEW)
+│       ├── migrations/          # D1 database migrations
+│       └── wrangler.jsonc       # Cloudflare configuration
 ├── docs/                        # Documentation
-│   ├── CLOUDFLARE_SETUP.md     # Cloudflare configuration guide
-│   └── PHASE_0_COMPLETION.md   # Phase 0 completion summary
+│   ├── ICS218_DEPLOYMENT_COMPLETE.md (NEW)
+│   ├── AIRTABLE_VEHICLE_INTEGRATION.md
+│   ├── CLOUDFLARE_SETUP.md
+│   └── PHASE_0_COMPLETION.md
 └── README.md                    # This file
 ```
 
 ---
 
-## Migration from MBFD
+## API Endpoints
 
-This system is forked from the **MBFD Fire Apparatus Checkout System**, preserving **75% of the proven infrastructure** while adapting for ICS-212 WF requirements.
+### ICS-212 Endpoints
 
-### Key Changes from MBFD:
-- **Form Type**: Apparatus checkout → ICS-212 WF vehicle inspection
-- **PDF Generation**: New PDFKit-based renderer for official form
-- **Digital Signatures**: New dual-signature workflow
-- **Storage**: Added R2 bucket for PDF archival
-- **Compliance**: 7-year retention for federal requirements
+```
+GET    /api/ics212/forms         - List all ICS-212 forms
+GET    /api/ics212/forms/:id     - Get specific form
+GET    /api/ics212/analytics     - Analytics data
+POST   /api/ics212/submit        - Submit new form
+GET    /api/ics212/pdf/:id       - Download PDF
+```
+
+### ICS-218 Endpoints (NEW)
+
+```
+GET    /api/ics218/forms         - List all ICS-218 forms
+GET    /api/ics218/forms/:id     - Get specific form
+POST   /api/ics218/submit        - Submit new form
+POST   /api/ics218/validate-password - Validate access
+GET    /api/ics218/pdf/:id       - Download PDF
+```
+
+### Vehicle Endpoints
+
+```
+GET    /api/vehicles/autocomplete?q=  - Search vehicles (Airtable)
+```
+
+---
+
+## User Guides
+
+### Submitting an ICS-212 Form
+
+1. Navigate to https://pdarleyjr.github.io/usar-ics212-system
+2. Click "ICS 212 - Vehicle Safety Inspection"
+3. Fill incident information
+4. Complete vehicle inspection checklist
+5. Add digital signature
+6. Review and submit
+7. Download PDF copy
+
+### Submitting an ICS-218 Form
+
+1. Navigate to https://pdarleyjr.github.io/usar-ics212-system
+2. Click "ICS 218 - Support Vehicle/Equipment Log"
+3. Enter password: `ICS218Deploy2026!`
+4. Fill incident information
+5. Add vehicles:
+   - Use autocomplete for Airtable vehicles (auto-fills 7 fields)
+   - Or manually enter vehicle details
+   - Add multiple vehicles as needed
+6. Complete "Prepared By" section with signature
+7. Review and submit
+8. Download PDF copy
+
+### Admin Dashboard
+
+1. Navigate to https://pdarleyjr.github.io/usar-ics212-system/admin
+2. Enter password: `AdminPass2026!`
+3. **Forms Tab**:
+   - Filter by form type (All/ICS 212/ICS 218)
+   - Search forms
+   - View details
+   - Download PDFs
+   - View GitHub issues
+4. **Analytics Tab**:
+   - View statistics for both form types
+   - Analyze trends and patterns
+   - Track vehicle counts (ICS-218)
+   - Monitor HOLD/RELEASE rates (ICS-212)
 
 ---
 
 ## Development Roadmap
 
-### ✅ Phase 0: Infrastructure Setup (Week 1)
-- [x] Fork MBFD repository to FLTF2-USAR
-- [x] Create new workspace directory
-- [x] Configure Git with FLTF2-USAR credentials
-- [x] Repository cloned and initialized
-- [ ] Cloudflare Workers, D1, R2, KV provisioned
-- [ ] GitHub API and Gmail OAuth configured
-- [ ] Initial Worker deployed to staging
+### ✅ Phase 0-5: Core Development (COMPLETED)
+- [x] Infrastructure setup
+- [x] ICS-212 form implementation
+- [x] PDF generation
+- [x] Digital signatures
+- [x] Admin dashboard
+- [x] Airtable integration
 
-### 🔄 Phase 1: Core Form MVP (Weeks 2-4)
-- [ ] Build ICS-212 form component
-- [ ] Implement 17 inspection items with validation
-- [ ] Add safety item business logic
-- [ ] Connect to Worker API
-- [ ] Create GitHub Issues for submissions
-
-### 🔄 Phase 2: PDF Generation (Weeks 5-6)
-- [ ] Integrate PDFKit library
-- [ ] Achieve 99.5%+ visual fidelity
-- [ ] Set up R2 bucket for storage
-- [ ] Generate PDFs from form data
-
-### 🔄 Phase 3: Digital Signatures (Week 7)
-- [ ] Implement signature capture component
-- [ ] Build two-stage workflow (inspector → operator)
-- [ ] Embed signatures in PDF
-
-### 🔄 Phase 4: Admin Portal (Week 8)
-- [ ] Create admin dashboard
-- [ ] Add search and filtering
-- [ ] PDF download and distribution
-
-### 🔄 Phase 5: Polish & Testing (Weeks 9-10)
-- [ ] Responsive design refinement
-- [ ] Accessibility compliance (WCAG AA)
-- [ ] Cross-browser testing
-- [ ] User acceptance testing
-
-### 🎯 Phase 6: Production Launch (Week 11)
-- [ ] Deploy to production
-- [ ] User training and documentation
-- [ ] Limited pilot rollout
-- [ ] Monitor and collect feedback
+### ✅ Phase 6-8: ICS-218 Integration (COMPLETED)
+- [x] ICS-218 form UI with multi-vehicle support
+- [x] Password protection system
+- [x] Airtable 7-field auto-population
+- [x] ICS-218 PDF generation
+- [x] GitHub issue creation for ICS-218
+- [x] Admin dashboard updates for unified management
+- [x] Combined analytics dashboard
+- [x] Comprehensive documentation
+- [x] Production deployment
 
 ---
 
-## Architecture Documentation
+## Documentation
 
-Complete architectural analysis and implementation guides are available in the source repository:
+Complete documentation available in [`/docs`](./docs):
 
-- **[ICS-212 Architectural Blueprint](../mbfd-checkout-system/usar-ics212-architecture/USAR-ICS212-ARCHITECTURAL-BLUEPRINT.md)** - Executive overview
-- **[Implementation Roadmap](../mbfd-checkout-system/usar-ics212-architecture/10-implementation-roadmap/IMPLEMENTATION-ROADMAP.md)** - 11-week plan
-- **[Step-by-Step Guide](../mbfd-checkout-system/usar-ics212-architecture/08-migration-strategy/step-by-step-guide.md)** - Detailed migration instructions
-- **[Configuration Mapping](../mbfd-checkout-system/usar-ics212-architecture/08-migration-strategy/configuration-mapping.md)** - Environment setup
+- **[ICS218 Deployment Guide](./docs/ICS218_DEPLOYMENT_COMPLETE.md)** - Complete ICS-218 documentation
+- **[Airtable Integration](./docs/AIRTABLE_VEHICLE_INTEGRATION.md)** - Vehicle autocomplete setup
+- **[Cloudflare Setup](./docs/CLOUDFLARE_SETUP.md)** - Infrastructure configuration
+- **[Phase 0 Completion](./docs/PHASE_0_COMPLETION.md)** - Initial setup summary
 
 ---
 
@@ -178,7 +276,7 @@ Complete architectural analysis and implementation guides are available in the s
 This is a private project for USAR Task Force operations. For questions or issues:
 
 1. Create a GitHub Issue
-2. Tag with appropriate labels (bug, enhancement, phase-0, etc.)
+2. Tag with appropriate labels (bug, enhancement, ics-212, ics-218, etc.)
 3. Assign to project maintainer
 
 ---
@@ -191,11 +289,12 @@ MIT License - See LICENSE file for details
 
 ## Support & Contact
 
-**Repository**: https://github.com/FLTF2-USAR/usar-ics212-system  
-**Parent Project**: Forked from [mbfd-checkout-system](https://github.com/pdarleyjr/mbfd-checkout-system)  
+**Repository**: https://github.com/pdarleyjr/mbfd-checkout-system  
+**Issues**: https://github.com/pdarleyjr/mbfd-checkout-system/issues  
+**Documentation**: See `/docs` folder
 
 ---
 
-**Document Version**: 1.0  
+**Document Version**: 2.0  
 **Last Updated**: 2026-01-06  
-**Status**: Phase 0 Complete - Infrastructure Ready for Development
+**Status**: ✅ Production - ICS-212 & ICS-218 Fully Deployed

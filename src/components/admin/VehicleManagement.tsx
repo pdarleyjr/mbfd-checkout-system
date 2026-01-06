@@ -17,14 +17,20 @@ import { showToast } from '../mobile/Toast';
 
 interface Vehicle {
   id: string;
-  fields: {
-    NAME: string;
-    UNIT: string;
-    LICENSE_PLATE?: string;
-    VEHICLE_TYPE?: string;
-    STATUS?: string;
-    NOTES?: string;
-  };
+  regUnit: string;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleType?: string;
+  features?: string;
+  agency?: string;
+  licenseNumber?: string;
+  vehicleId?: string;
+  incidentId?: string;
+  vehicleStatus?: string;
+  lastInspectionDate?: string;
+  nextInspectionDue?: string;
+  inspectionFrequencyDays?: number;
+  notes?: string;
 }
 
 export function VehicleManagement() {
@@ -53,9 +59,10 @@ export function VehicleManagement() {
   const filteredVehicles = vehicles.filter(vehicle => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      vehicle.fields.NAME?.toLowerCase().includes(searchLower) ||
-      vehicle.fields.UNIT?.toLowerCase().includes(searchLower) ||
-      vehicle.fields.LICENSE_PLATE?.toLowerCase().includes(searchLower)
+      vehicle.regUnit?.toLowerCase().includes(searchLower) ||
+      vehicle.vehicleMake?.toLowerCase().includes(searchLower) ||
+      vehicle.vehicleModel?.toLowerCase().includes(searchLower) ||
+      vehicle.licenseNumber?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -75,7 +82,7 @@ export function VehicleManagement() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
         <input
           type="search"
-          placeholder="Search vehicles by name, unit, or license plate..."
+          placeholder="Search vehicles by name, make, model, or license plate..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -106,51 +113,51 @@ export function VehicleManagement() {
                 {/* Vehicle Icon & Name */}
                 <div className="flex items-start gap-3 mb-4">
                   <div className="text-4xl">
-                    {vehicle.fields.VEHICLE_TYPE?.toLowerCase().includes('truck') ? '🚛' : '🚗'}
+                    {vehicle.vehicleType?.toLowerCase().includes('truck') ? '🚛' : '🚗'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                      {vehicle.fields.NAME}
+                      {vehicle.regUnit}
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {vehicle.fields.UNIT}
+                      {vehicle.vehicleMake} {vehicle.vehicleModel}
                     </p>
                   </div>
                 </div>
 
                 {/* Vehicle Details */}
                 <div className="space-y-2 text-sm">
-                  {vehicle.fields.LICENSE_PLATE && (
+                  {vehicle.licenseNumber && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <span className="font-medium">License:</span>
-                      <span>{vehicle.fields.LICENSE_PLATE}</span>
+                      <span>{vehicle.licenseNumber}</span>
                     </div>
                   )}
-                  {vehicle.fields.VEHICLE_TYPE && (
+                  {vehicle.vehicleType && (
                     <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                       <span className="font-medium">Type:</span>
-                      <span>{vehicle.fields.VEHICLE_TYPE}</span>
+                      <span>{vehicle.vehicleType}</span>
                     </div>
                   )}
-                  {vehicle.fields.STATUS && (
+                  {vehicle.vehicleStatus && (
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-700 dark:text-gray-300">Status:</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        vehicle.fields.STATUS === 'Active'
+                        vehicle.vehicleStatus === 'Active'
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                       }`}>
-                        {vehicle.fields.STATUS}
+                        {vehicle.vehicleStatus}
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Notes */}
-                {vehicle.fields.NOTES && (
+                {vehicle.notes && (
                   <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                     <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                      {vehicle.fields.NOTES}
+                      {vehicle.notes}
                     </p>
                   </div>
                 )}
@@ -159,7 +166,7 @@ export function VehicleManagement() {
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <TouchFeedback>
                     <a
-                      href={`/?vehicle=${encodeURIComponent(vehicle.fields.NAME)}`}
+                      href={`/?vehicle=${encodeURIComponent(vehicle.regUnit)}`}
                       className="block w-full py-2 px-4 bg-blue-600 text-white rounded-lg text-center text-sm font-medium hover:bg-blue-700 transition-colors"
                     >
                       📋 New Inspection

@@ -6,7 +6,7 @@
 import { createAirtableClient, VehicleRecord } from '../integrations/airtable';
 
 interface Env {
-  AIRTABLE_API_TOKEN: string;
+  AIRTABLE_API_KEY: string;
   AIRTABLE_BASE_ID: string;
   AIRTABLE_TABLE_NAME: string;
 }
@@ -32,27 +32,54 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
   }
 
   try {
+    console.log('[VEHICLES] Request:', method, path);
+    console.log('[VEHICLES] Airtable API Key:', env.AIRTABLE_API_KEY ? 'SET' : 'MISSING');
+    console.log('[VEHICLES] Airtable Base ID:', env.AIRTABLE_BASE_ID ? 'SET' : 'MISSING');
+    console.log('[VEHICLES] Airtable Table Name:', env.AIRTABLE_TABLE_NAME || 'Vehicles (default)');
+
+    // Validate Airtable credentials
+    if (!env.AIRTABLE_API_KEY || !env.AIRTABLE_BASE_ID) {
+      console.error('[VEHICLES] Missing Airtable credentials');
+      return new Response(JSON.stringify({ 
+        error: 'Airtable credentials not configured',
+        details: {
+          hasApiKey: !!env.AIRTABLE_API_KEY,
+          hasBaseId: !!env.AIRTABLE_BASE_ID,
+          hasTableName: !!env.AIRTABLE_TABLE_NAME
+        }
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Initialize Airtable client
     const airtable = createAirtableClient(env);
+    console.log('[VEHICLES] Airtable client initialized');
 
     // Route: GET /api/vehicles - List all vehicles
     if (path === '/api/vehicles' && method === 'GET') {
       const status = url.searchParams.get('status');
       const search = url.searchParams.get('search');
+      console.log('[VEHICLES] Fetching vehicles - status:', status, 'search:', search);
 
       let vehicles: VehicleRecord[];
 
       if (search) {
         // Search by reg/unit
+        console.log('[VEHICLES] Searching by reg/unit:', search);
         vehicles = await airtable.searchByRegUnit(search);
       } else if (status) {
         // Filter by status
+        console.log('[VEHICLES] Filtering by status:', status);
         vehicles = await airtable.getVehiclesByStatus(status as any);
       } else {
         // Get all vehicles
+        console.log('[VEHICLES] Fetching all vehicles');
         vehicles = await airtable.fetchVehicles();
       }
 
+      console.log('[VEHICLES] Successfully fetched', vehicles.length, 'vehicles');
       return new Response(JSON.stringify({ vehicles }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -68,14 +95,17 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
         });
       }
 
+      console.log('[VEHICLES] Fetching vehicle by ID:', id);
       const vehicle = await airtable.getVehicleById(id);
       if (!vehicle) {
+        console.log('[VEHICLES] Vehicle not found:', id);
         return new Response(JSON.stringify({ error: 'Vehicle not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
+      console.log('[VEHICLES] Successfully fetched vehicle:', id);
       return new Response(JSON.stringify({ vehicle }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -84,6 +114,7 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
     // Route: POST /api/vehicles - Create new vehicle
     if (path === '/api/vehicles' && method === 'POST') {
       const body = await request.json() as Omit<VehicleRecord, 'id'>;
+      console.log('[VEHICLES] Creating new vehicle:', body.regUnit);
       
       // Validate required fields
       if (!body.regUnit || !body.vehicleMake) {
@@ -94,6 +125,7 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
       }
 
       const vehicle = await airtable.createVehicle(body);
+      console.log('[VEHICLES] Successfully created vehicle:', vehicle.id);
       return new Response(JSON.stringify({ vehicle }), {
         status: 201,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -110,8 +142,10 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
         });
       }
 
+      console.log('[VEHICLES] Updating vehicle:', id);
       const updates = await request.json() as Partial<VehicleRecord>;
       const vehicle = await airtable.updateVehicle(id, updates);
+      console.log('[VEHICLES] Successfully updated vehicle:', id);
 
       return new Response(JSON.stringify({ vehicle }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -128,7 +162,9 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
         });
       }
 
+      console.log('[VEHICLES] Deleting vehicle:', id);
       await airtable.deleteVehicle(id);
+      console.log('[VEHICLES] Successfully deleted vehicle:', id);
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -144,6 +180,7 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
         });
       }
 
+      console.log('[VEHICLES] Autocomplete search:', query);
       const vehicles = await airtable.searchByRegUnit(query);
       const suggestions = vehicles.map(v => ({
         id: v.id,
@@ -153,22 +190,27 @@ export async function handleVehicles(request: Request, env: Env): Promise<Respon
         label: `${v.regUnit} - ${v.vehicleMake} ${v.vehicleType}`.trim()
       }));
 
+      console.log('[VEHICLES] Autocomplete returned', suggestions.length, 'suggestions');
       return new Response(JSON.stringify({ suggestions }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Route not found
+    console.log('[VEHICLES] Route not found:', method, path);
     return new Response(JSON.stringify({ error: 'Not found' }), {
       status: 404,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error: any) {
-    console.error('Vehicle API error:', error);
+    console.error('[VEHICLES] Error:', error);
+    console.error('[VEHICLES] Error message:', error.message);
+    console.error('[VEHICLES] Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: 'Internal server error', 
-      message: error.message 
+      message: error.message,
+      stack: error.stack
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

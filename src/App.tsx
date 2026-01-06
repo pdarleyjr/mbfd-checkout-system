@@ -2,10 +2,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import { AdminAuth } from './components/admin/AdminAuth';
+import { ICS218Auth } from './components/ics218/ICS218Auth';
 
 // Lazy load route components for code splitting
 const HomePage = lazy(() => import('./components/HomePage'));
 const ICS212Form = lazy(() => import('./components/ICS212Form'));
+const ICS218Form = lazy(() => import('./components/ics218/ICS218Form'));
 const ICS212AdminDashboard = lazy(() => import('./components/admin/ICS212AdminDashboard').then(m => ({ default: m.ICS212AdminDashboard })));
 
 // Create QueryClient for React Query  
@@ -34,10 +37,25 @@ function App() {
       <BrowserRouter>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            {/* Main ICS-212 Routes */}
+            {/* Main Routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/form" element={<ICS212Form />} />
-            <Route path="/admin" element={<ICS212AdminDashboard />} />
+            <Route 
+              path="/ics218" 
+              element={
+                <ICS218Auth>
+                  <ICS218Form />
+                </ICS218Auth>
+              } 
+            />
+            <Route 
+              path="/admin" 
+              element={
+                <AdminAuth>
+                  <ICS212AdminDashboard />
+                </AdminAuth>
+              } 
+            />
             
             {/* Redirect old routes to new structure */}
             <Route path="/inspection" element={<Navigate to="/form" replace />} />
