@@ -3,6 +3,7 @@ import { LayoutDashboard, Bell, HelpCircle, RefreshCw } from 'lucide-react';
 import { FileManagementModule } from './FileManagementModule';
 import { ProgressTrackingModule } from './ProgressTrackingModule';
 import { IntegratedEmailModule } from './IntegratedEmailModule';
+import { VehiclesModule } from './VehiclesModule';
 import { cn } from '../../../lib/utils';
 
 interface DashboardHomeProps {
@@ -10,7 +11,7 @@ interface DashboardHomeProps {
 }
 
 type ViewMode = 'tabs' | 'columns';
-type ActiveModule = 'files' | 'analytics' | 'email';
+type ActiveModule = 'files' | 'progress' | 'email' | 'vehicles';
 
 export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword = 'AdminPass2026!' }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('tabs');
@@ -127,15 +128,15 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword = 'A
                   📁 Files
                 </button>
                 <button
-                  onClick={() => setActiveModule('analytics')}
+                  onClick={() => setActiveModule('progress')}
                   className={cn(
                     'px-6 py-4 font-semibold text-sm transition-colors whitespace-nowrap',
-                    activeModule === 'analytics'
+                    activeModule === 'progress'
                       ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   )}
                 >
-                  📊 Analytics
+                  📈 Progress
                 </button>
                 <button
                   onClick={() => setActiveModule('email')}
@@ -148,6 +149,17 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword = 'A
                 >
                   ✉️ Email
                 </button>
+                <button
+                  onClick={() => setActiveModule('vehicles')}
+                  className={cn(
+                    'px-6 py-4 font-semibold text-sm transition-colors whitespace-nowrap',
+                    activeModule === 'vehicles'
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  )}
+                >
+                  🚗 Vehicles
+                </button>
               </div>
             </div>
 
@@ -156,11 +168,14 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ adminPassword = 'A
               {activeModule === 'files' && (
                 <FileManagementModule adminPassword={adminPassword} />
               )}
-              {activeModule === 'analytics' && (
+              {activeModule === 'progress' && (
                 <ProgressTrackingModule adminPassword={adminPassword} />
               )}
               {activeModule === 'email' && (
                 <IntegratedEmailModule adminPassword={adminPassword} />
+              )}
+              {activeModule === 'vehicles' && (
+                <VehiclesModule adminPassword={adminPassword} />
               )}
             </div>
           </div>
