@@ -30,7 +30,6 @@ import { Modal } from '../../ui/Modal';
 import type {
   AnalyticsTimeframe,
   AdvancedAnalyticsResponse,
-  DashboardStatistics,
 } from '../../../types';
 import { API_BASE_URL } from '../../../lib/config';
 import { cn } from '../../../lib/utils';
@@ -384,7 +383,7 @@ export const ProgressTrackingModule: React.FC<ProgressTrackingModuleProps> = ({
                     `${entry.formType || entry.name}: ${entry.percentage || entry.percent}%`
                   }
                 >
-                  {analytics.formTypeDistribution.map((entry, index) => (
+                  {analytics.formTypeDistribution.map((_entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={

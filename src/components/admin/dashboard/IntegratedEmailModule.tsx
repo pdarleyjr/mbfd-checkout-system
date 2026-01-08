@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Mail, Send, Save, Paperclip, X, Plus, User, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Send, Save, Paperclip, X, Plus, Users } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../../ui/Card';
 import { Button } from '../../ui/Button';
 import { Modal } from '../../ui/Modal';
-import type { EmailRecipient, EmailTemplate, EmailDraft, SentEmail, EmailAttachment } from '../../../types';
+import type { EmailRecipient, EmailTemplate, SentEmail, EmailAttachment } from '../../../types';
 import { API_BASE_URL } from '../../../lib/config';
 import { cn } from '../../../lib/utils';
 
@@ -21,7 +21,6 @@ export const IntegratedEmailModule: React.FC<IntegratedEmailModuleProps> = ({ ad
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [sentEmails, setSentEmails] = useState<SentEmail[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddRecipient, setShowAddRecipient] = useState(false);
