@@ -62,7 +62,7 @@ export interface ChecklistData {
 }
 
 // Fixed apparatus casing to match UI usage
-export type Apparatus = 
+export type Apparatus =
   | 'Engine 1' | 'Engine 2' | 'Engine 3' | 'Engine 4'
   | 'Ladder 1' | 'Ladder 3'
   | 'Rescue 1' | 'Rescue 2' | 'Rescue 3' | 'Rescue 4'
@@ -210,4 +210,363 @@ export interface VehicleChangeRequestResponse {
   requests: VehicleChangeRequest[];
   total: number;
   pending: number;
+}
+
+// ============================================================
+// ICS-212 VEHICLE INSPECTION FORM TYPES
+// ============================================================
+
+// Vehicle data from Airtable - matches VehicleRecord from airtable.ts
+export interface Vehicle {
+  id: string;
+  regUnit: string;
+  vehicleMake: string;
+  vehicleType: string;
+  features?: string;
+  agency?: string;
+  licenseNumber?: string;
+  vehicleId?: string;
+  incidentId?: string;
+  vehicleStatus?: 'Active' | 'Inactive' | 'Maintenance' | 'Deployed';
+  lastInspectionDate?: string;
+  nextInspectionDue?: string;
+  inspectionFrequencyDays?: number;
+  notes?: string;
+}
+
+// ICS-212 Inspection Item
+export interface InspectionItem {
+  itemNumber: number;
+  description: string;
+  status: 'pass' | 'fail' | 'n/a';
+  comments?: string;
+  isSafetyItem: boolean;
+  reference?: string;
+}
+
+// Digital Signature
+export interface DigitalSignature {
+  imageData: string; // Base64 PNG
+  signedAt: string; // ISO timestamp
+  signedBy: string; // Person name
+  ipAddress?: string;
+  deviceId?: string;
+}
+
+// ICS-212 Form Data
+export interface ICS212FormData {
+  // Meta
+  formId?: string;
+  status?: 'draft' | 'inspector_signed' | 'submitted' | 'approved';
+  
+  // Header Fields (Section 1)
+  incidentName: string;
+  orderNo?: string;
+  vehicleLicenseNo: string;
+  agencyRegUnit: string;
+  vehicleType: string;
+  odometerReading: number;
+  vehicleIdNo: string;
+  selectedVehicleId?: string; // Track when a vehicle from Airtable is selected
+  
+  // Inspection Items (Section 2)
+  inspectionItems: InspectionItem[];
+  
+  // Additional Comments (Section 3)
+  additionalComments?: string;
+  
+  // Release Decision (Section 4)
+  releaseStatus: 'hold' | 'release';
+  
+  // Inspector Signature (Section 5.1)
+  inspectorDate: string; // ISO date
+  inspectorTime: string; // HH:MM
+  inspectorNamePrint: string;
+  inspectorSignature?: DigitalSignature;
+  
+  // Operator Signature (Section 5.2)
+  operatorDate?: string;
+  operatorTime?: string;
+  operatorNamePrint?: string;
+  operatorSignature?: DigitalSignature;
+  
+  // System Metadata
+  submittedAt?: string;
+  createdBy?: string;
+  organizationId?: string;
+  version?: number;
+}
+
+// ICS-212 Form Submission Response
+export interface ICS212SubmissionResponse {
+  success: boolean;
+  formId: string;
+  issueNumber?: number;
+  releaseDecision: 'hold' | 'release';
+  pdfUrl?: string;
+  message?: string;
+  error?: string;
+}
+
+// Form validation result
+export interface FormValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+  warnings: string[];
+}
+
+// Draft save data
+export interface ICS212DraftData { 
+  formData: Partial<ICS212FormData>;
+  currentStep: number;
+  savedAt: string;
+  expiresAt: string;
+}
+
+// ============================================================
+// ICS-218 VEHICLE/EQUIPMENT INVENTORY FORM TYPES
+// ============================================================
+
+// ICS-218 Vehicle Entry (single row in the inventory table)
+export interface ICS218VehicleEntry {
+  orderRequestNumber?: string;
+  incidentIdNo?: string;
+  classification: string;
+  make: string;
+  categoryKindType: string;
+  features?: string;
+  agencyOwner: string;
+  operatorNameContact: string;
+  vehicleLicenseId: string;
+  incidentAssignment: string;
+  startDateTime: string; // ISO 8601
+  releaseDateTime?: string; // ISO 8601
+  airtableId?: string; // Reference to source vehicle in Airtable
+}
+
+// ICS-218 Form Data
+export interface ICS218FormData {
+  // Meta
+  id: string;
+  status?: 'draft' | 'submitted';
+  
+  // Header Fields
+  incidentName: string;
+  incidentNumber: string;
+  datePrepared: string; // ISO 8601
+  timePrepared: string; // HH:MM
+  vehicleCategory: string;
+  operationalPeriod?: string;
+  
+  // Vehicle Inventory Table
+  vehicles: ICS218VehicleEntry[];
+  
+  // Footer - Prepared By
+  preparedBy: {
+    name: string;
+    positionTitle: string;
+    signature: string; // Base64 data URL
+    signatureTimestamp: string; // ISO 8601
+  };
+  
+  // System Metadata
+  submittedAt?: string;
+  submittedBy?: string;
+  createdBy?: string;
+  organizationId?: string;
+  version?: number;
+}
+
+// ICS-218 Form Submission Response
+export interface ICS218SubmissionResponse {
+  success: boolean;
+  id: string;
+  pdfUrl?: string;
+  githubIssueUrl?: string;
+  message?: string;
+  error?: string;
+}
+
+// ICS-218 Draft Data
+export interface ICS218DraftData {
+  formData: Partial<ICS218FormData>;
+  currentStep: number;
+  savedAt: string;
+  expiresAt: string;
+}
+
+// ICS-218 Password Validation
+export interface ICS218PasswordValidationRequest {
+  password: string;
+}
+
+export interface ICS218PasswordValidationResponse {
+  success: boolean;
+  token?: string;
+  expiresAt?: string;
+  error?: string;
+}
+
+// ============================================================
+// ADMIN DASHBOARD MODULE TYPES
+// ============================================================
+
+// File Management Module Types
+export interface FileMetadata {
+  id: string;
+  filename: string;
+  fileType: 'PDF' | 'Image' | 'Document' | 'Other';
+  size: number; // in bytes
+  uploader: string;
+  uploadDate: string; // ISO 8601
+  associatedForm?: string; // form ID
+  url: string;
+  thumbnailUrl?: string;
+}
+
+export interface FileUploadProgress {
+  filename: string;
+  progress: number; // 0-100
+  status: 'pending' | 'uploading' | 'complete' | 'error';
+  error?: string;
+}
+
+export interface FileBatchDownloadRequest {
+  fileIds: string[];
+}
+
+export interface FileBatchDownloadResponse {
+  success: boolean;
+  zipUrl: string;
+  expiresAt: string;
+}
+
+// Progress Tracking Module Types
+export interface AnalyticsTimeframe {
+  type: 'today' | 'week' | 'month' | 'last30' | 'deployment' | 'custom';
+  startDate?: string; // ISO 8601
+  endDate?: string; // ISO 8601
+}
+
+export interface DashboardStatistics {
+  totalSubmissions: number;
+  totalSubmissionsTrend?: number; // percentage change
+  completionRate: number; // 0-100
+  completionRateTrend?: number;
+  pendingForms: number;
+  releasedVehicles: number;
+  holdVehicles: number;
+  averageCompletionTime: number; // in minutes
+}
+
+export interface SubmissionTrendData {
+  date: string; // ISO 8601
+  submissions: number;
+  formType?: string;
+}
+
+export interface FormTypeDistribution {
+  formType: string;
+  count: number;
+  percentage: number;
+}
+
+export interface VehicleStatusData {
+  status: 'Released' | 'Hold' | 'Pending';
+  count: number;
+}
+
+export interface SafetyItemFailure {
+  item: string;
+  failureCount: number;
+  percentage: number;
+}
+
+export interface RecentSubmissionSummary {
+  id: string;
+  formType: string;
+  vehicle: string;
+  date: string;
+  status: string;
+}
+
+export interface AdvancedAnalyticsResponse {
+  statistics: DashboardStatistics;
+  submissionTrend: SubmissionTrendData[];
+  formTypeDistribution: FormTypeDistribution[];
+  vehicleStatusData: VehicleStatusData[];
+  safetyItemFailures: SafetyItemFailure[];
+  recentSubmissions: RecentSubmissionSummary[];
+}
+
+// Email Module Types
+export interface EmailRecipient {
+  email: string;
+  name?: string;
+  type: 'individual' | 'group';
+}
+
+export interface EmailAttachment {
+  id: string;
+  filename: string;
+  size: number;
+  url?: string;
+  source: 'form' | 'upload';
+}
+
+export interface EmailTemplate {
+  id: string;
+  name: string;
+  category: 'inspection' | 'deployment' | 'general';
+  subject: string;
+  body: string;
+  variables: string[]; // e.g., ['{{vehicleName}}', '{{formDate}}']
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailDraft {
+  id: string;
+  recipients: EmailRecipient[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  attachments: EmailAttachment[];
+  savedAt: string;
+}
+
+export interface SentEmail {
+  id: string;
+  recipients: string[];
+  subject: string;
+  body?: string;
+  sentAt: string;
+  status: 'sent' | 'failed';
+  attachmentCount: number;
+  error?: string;
+}
+
+export interface EmailSendRequest {
+  recipients: EmailRecipient[];
+  cc?: string[];
+  bcc?: string[];
+  subject: string;
+  body: string;
+  isHtml?: boolean;
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailSendResponse {
+  success: boolean;
+  messageId?: string;
+  message?: string;
+  error?: string;
+}
+
+export interface EmailHistoryResponse {
+  emails: SentEmail[];
+  total: number;
+  page: number;
+  pageSize: number;
 }

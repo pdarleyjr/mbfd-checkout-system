@@ -4,88 +4,47 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "mbfd-github-proxy",
+	"name": "usar-ics212",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-12-10",
 	"compatibility_flags": [
-		"global_fetch_strictly_public"
+		"global_fetch_strictly_public",
+		"nodejs_compat"
 	],
 	"assets": {
-		// The path to the directory containing the `index.html` file to be served at `/`
 		"directory": "./public"
 	},
 	"observability": {
 		"enabled": true
 	},
 	
-	// KV namespace for email configuration and notification queuing
+	// KV namespaces for USAR ICS-212 storage
 	"kv_namespaces": [
 		{
-			"binding": "MBFD_CONFIG",
-			"id": "a025d543428c447f87e8a4854740e860"
+			"binding": "USAR_CONFIG",
+			"id": "a08b5ff17d5a4442ba11951d7615cee2"
 		},
 		{
-			"binding": "MBFD_UPLOADS",
-			"id": "8c4f7aea557544cb8c4c2dd66437a237"
+			"binding": "USAR_UPLOADS",
+			"id": "ed5b2e35b1d049b98b49bb69b13b7432"
 		}
 	],
 	
-	// D1 database for supply tasks and vehicle change requests
+	// D1 database for ICS-212 forms
 	"d1_databases": [
 		{
-			"binding": "SUPPLY_DB",
-			"database_name": "mbfd-supply-db",
-			"database_id": "cf08a755-e162-4144-a2a5-db34aa1216ad"
-		},
-		{
 			"binding": "DB",
-			"database_name": "mbfd-supply-db",
-			"database_id": "cf08a755-e162-4144-a2a5-db34aa1216ad"
+			"database_name": "usar-ics212-db",
+			"database_id": "b3125342-8700-4b9b-8c6e-92ca621c1bc5"
 		}
 	],
 	
-	// Cron trigger for daily digest at 12:00 PM Eastern (17:00 UTC)
-	// Note: Eastern Standard Time is UTC-5
-	"triggers": {
-		"crons": ["0 17 * * *"]
-	},
 	"ai": {
 		"binding": "AI"
 	},
-	/**
-	 * Smart Placement
-	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-	 */
-	// "placement": { "mode": "smart" }
-	/**
-	 * Bindings
-	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-	 * databases, object storage, AI inference, real-time communication and more.
-	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-	 */
-	/**
-	 * Environment Variables
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-	 */
-	// "vars": { "MY_VARIABLE": "production_value" }
-	/**
-	 * Note: Use secrets to store sensitive data.
-	 * https://developers.cloudflare.com/workers/configuration/secrets/
-	 */
-	/**
-	 * Static Assets
-	 * https://developers.cloudflare.com/workers/static-assets/binding/
-	 */
-	// "assets": { "directory": "./public/", "binding": "ASSETS" }
-	/**
-	 * Service Bindings (communicate between multiple Workers)
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-	 */
-	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 	
 	// Environment variables (non-sensitive)
 	"vars": {
-		"MBFD_HOSTNAME": "https://mbfd-github-proxy.pdarleyjr.workers.dev",
-		"RECEIPT_TTL_DAYS": "90"
+		"WORKER_HOSTNAME": "https://usar-ics212.pdarleyjr.workers.dev"
 	}
 }

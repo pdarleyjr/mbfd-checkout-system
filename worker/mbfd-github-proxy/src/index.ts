@@ -9,6 +9,7 @@
  * - Cache optimization for GET requests to reduce API calls
  * 
  * NEW: Email notification system with Gmail OAuth integration
+ * NEW: Airtable vehicle database integration for USAR ICS-212 forms
  * 
  * RATE LIMITING STRATEGY:
  * - Cloudflare Workers provides built-in DDoS protection at the edge
@@ -50,6 +51,19 @@ import {
 } from './handlers/forms';
 import { handleImageUpload, handleImageRetrieval } from './handlers/uploads';
 import { handleHealthCheck } from './handlers/health';
+import { handleVehicles } from './handlers/vehicles';
+import { handleICS212Submit } from './handlers/ics212-submit';
+import { handlePDFDownload, handlePDFPreview } from './handlers/ics212-pdf-download';
+import { handleICS212Admin } from './handlers/ics212-admin';
+// ICS 218 handlers
+import { handleICS218PasswordValidation } from './handlers/ics218-password';
+import { handleICS218Submit } from './handlers/ics218-submit';
+import { handleICS218FormsList, handleICS218FormGet } from './handlers/ics218-forms';
+// NEW: Admin dashboard handlers
+import { handleFiles } from './handlers/files-handler';
+import { handleEmail } from './handlers/email-handler';
+import { handleAnalytics } from './handlers/analytics-handler';
+import { handleAirtable } from './handlers/airtable-handler';
 import { sendDailyDigest } from './digest';
 
 export interface Env {
@@ -60,15 +74,26 @@ export interface Env {
   GMAIL_CLIENT_SECRET: string;
   GMAIL_REFRESH_TOKEN: string;
   GMAIL_SENDER_EMAIL: string;
+  // Gmail SMTP secrets for email distribution
+  GMAIL_USER: string;
+  GMAIL_APP_PASSWORD: string;
   // Google Sheets service account
   GOOGLE_SA_KEY: string;
   GOOGLE_SHEET_ID: string;
   // Apparatus Status Sheet (separate from inventory)
   APPARATUS_STATUS_SHEET_ID?: string;
-  // KV namespace for configuration and queuing
-  MBFD_CONFIG: KVNamespace;
-  // KV namespace for image uploads
-  MBFD_UPLOADS: KVNamespace;
+  // Airtable vehicle database
+  AIRTABLE_API_KEY: string;
+  AIRTABLE_BASE_ID: string;
+  AIRTABLE_TABLE_NAME: string;
+  // R2 storage for PDFs (optional - falls back to KV)
+  USAR_FORMS?: R2Bucket;
+  R2_PUBLIC_URL?: string;
+  // KV namespaces for configuration and storage
+  MBFD_CONFIG: KVNamespace; // Legacy binding (required)
+  MBFD_UPLOADS: KVNamespace; // Legacy uploads binding (required)
+  USAR_CONFIG?: KVNamespace; // New USAR-specific config
+  USAR_UPLOADS?: KVNamespace; // New USAR-specific uploads (used for PDF storage fallback)
   // D1 database for task storage and vehicle change requests
   SUPPLY_DB?: D1Database;
   DB?: D1Database; // Alias for SUPPLY_DB for consistency
@@ -77,6 +102,8 @@ export interface Env {
   // Receipt hosting configuration
   MBFD_HOSTNAME?: string;
   RECEIPT_TTL_DAYS?: string;
+  // ICS 218 password protection
+  ICS218_PASSWORD?: string;
 }
 
 interface GitHubErrorResponse {
@@ -95,7 +122,12 @@ interface RequestBody {
 
 const REPO_OWNER = 'pdarleyjr';
 const REPO_NAME = 'mbfd-checkout-system';
-const ALLOWED_ORIGIN = 'https://pdarleyjr.github.io';
+const ALLOWED_ORIGINS = [
+  'https://pdarleyjr.github.io',
+  'https://usar-ics212.pages.dev',
+  'https://56a46871.usar-ics212.pages.dev', // Production deployment
+  'http://localhost:5173', // For local development
+];
 
 // Cache configuration
 const CACHE_TTL = {
@@ -103,16 +135,31 @@ const CACHE_TTL = {
   ISSUE_DETAIL: 300, // 5 minutes for individual issues
 };
 
+/**
+ * Helper to get CORS headers with proper origin
+ */
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  // Check if origin is allowed
+  const allowedOrigin = origin && ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))
+    ? origin
+    : ALLOWED_ORIGINS[0]; // Default to first allowed origin
+
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
+    'Access-Control-Max-Age': '86400',
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const origin = request.headers.get('Origin');
+    
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
-        },
+        headers: getCorsHeaders(origin),
       });
     }
 
@@ -120,11 +167,7 @@ export default {
     const path = url.pathname;
 
     // CORS headers for all responses
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
-    };
+    const corsHeaders = getCorsHeaders(origin);
 
     // Health check endpoint (always accessible)
     if (path === '/health') {
@@ -135,8 +178,9 @@ export default {
         adminPasswordConfigured: !!env.ADMIN_PASSWORD,
         cacheEnabled: true,
         emailConfigured: !!(env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN),
-        kvConfigured: !!env.MBFD_CONFIG
-      });
+        kvConfigured: !!env.MBFD_CONFIG,
+        airtableConfigured: !!(env.AIRTABLE_API_KEY && env.AIRTABLE_BASE_ID)
+      }, { headers: corsHeaders });
     }
 
     // Integration health check endpoint (admin only)
@@ -144,13 +188,12 @@ export default {
       return await handleHealthCheck(request, env, corsHeaders);
     }
 
-    // Origin check for security (allow requests only from our app)
-    const origin = request.headers.get('Origin');
-    if (origin && !origin.startsWith(ALLOWED_ORIGIN)) {
+    // Origin check for security (allow requests only from our apps)
+    if (origin && !ALLOWED_ORIGINS.some(allowed => origin.startsWith(allowed))) {
       console.error('Forbidden: Invalid origin', origin);
       return jsonResponse(
         { error: 'Forbidden', message: 'Access denied from this origin' },
-        { status: 403 }
+        { status: 403, headers: corsHeaders }
       );
     }
 
@@ -262,7 +305,7 @@ export default {
     }
 
     // Vehicle change request review endpoint - extract ID from path
-    const vcRequestMatch = path.match(/^\/api\/apparatus-status\/requests\/(.+)$/);
+    const vcRequestMatch = path.match(/^\/api\/apparatus-status\/requests\/(.+)$/)
     if (vcRequestMatch && request.method === 'PATCH') {
       const requestId = vcRequestMatch[1];
       return await handleReviewVehicleChangeRequest(request, env, corsHeaders, requestId);
@@ -283,7 +326,7 @@ export default {
     }
 
     // Task update endpoint - extract ID from path
-    const taskMatch = path.match(/^\/api\/tasks\/(.+)$/);
+    const taskMatch = path.match(/^\/api\/tasks\/(.+)$/)
     if (taskMatch && request.method === 'PATCH') {
       const taskId = taskMatch[1];
       // Make sure 'mark-viewed' doesn't match this regex
@@ -307,7 +350,7 @@ export default {
     }
 
     // Receipt retrieval endpoint - extract ID from path
-    const receiptMatch = path.match(/^\/receipts\/([0-9a-f-]+)$/);
+    const receiptMatch = path.match(/^\/receipts\/([0-9a-f-]+)$/)
     if (receiptMatch && request.method === 'GET') {
       const receiptId = receiptMatch[1];
       return await handleGetReceipt(request, env, receiptId);
@@ -319,7 +362,7 @@ export default {
     }
 
     // Image retrieval endpoint - extract key from path
-    const imageMatch = path.match(/^\/api\/uploads\/(.+)$/);
+    const imageMatch = path.match(/^\/api\/uploads\/(.+)$/)
     if (imageMatch && request.method === 'GET') {
       const key = imageMatch[1];
       return await handleImageRetrieval(request, env, key);
@@ -332,7 +375,7 @@ export default {
     }
 
     // Get form for specific apparatus (public for inspections)
-    const apparatusMatch = path.match(/^\/api\/forms\/apparatus\/(.+)$/);
+    const apparatusMatch = path.match(/^\/api\/forms\/apparatus\/(.+)$/)
     if (apparatusMatch && request.method === 'GET') {
       const apparatusName = decodeURIComponent(apparatusMatch[1]);
       return await handleGetFormByApparatus(request, env, corsHeaders, apparatusName);
@@ -344,7 +387,7 @@ export default {
     }
 
     // Get specific template (admin only)
-    const templateMatch = path.match(/^\/api\/forms\/template\/(.+)$/);
+    const templateMatch = path.match(/^\/api\/forms\/template\/(.+)$/)
     if (templateMatch && request.method === 'GET') {
       const templateId = decodeURIComponent(templateMatch[1]);
       return await handleGetTemplate(request, env, corsHeaders, templateId);
@@ -356,7 +399,7 @@ export default {
     }
 
     // Update form template (admin only)
-    const updateFormMatch = path.match(/^\/api\/forms\/(.+)$/);
+    const updateFormMatch = path.match(/^\/api\/forms\/(.+)$/)
     if (updateFormMatch && request.method ===  'PUT' && !updateFormMatch[1].includes('/')) {
       const templateId = decodeURIComponent(updateFormMatch[1]);
       return await handleUpdateForm(request, env, corsHeaders, templateId);
@@ -365,6 +408,77 @@ export default {
     // AI Import endpoint (admin only)
     if (path === '/api/forms/import' && request.method === 'POST') {
       return await handleImportForm(request, env, corsHeaders);
+    }
+
+    // NEW: Vehicle API endpoints (USAR ICS-212 integration)
+    if (path.startsWith('/api/vehicles')) {
+      return await handleVehicles(request, env);
+    }
+
+    // NEW: ICS-212 form submission endpoint
+    if (path === '/api/ics212/submit' && request.method === 'POST') {
+      return await handleICS212Submit(request, env, corsHeaders);
+    }
+
+    // NEW: ICS-212 PDF download endpoint
+    if (path === '/api/ics212/pdf' && request.method === 'GET') {
+      return await handlePDFDownload(request, env, corsHeaders);
+    }
+
+    // NEW: ICS-212 PDF preview endpoint (inline display)
+    if (path === '/api/ics212/pdf/preview' && request.method === 'GET') {
+      return await handlePDFPreview(request, env, corsHeaders);
+    }
+
+    // NEW: ICS-212 Admin Dashboard API endpoints
+    if (path.startsWith('/api/ics212/forms') || path.startsWith('/api/ics212/analytics')) {
+      return await handleICS212Admin(request, env, corsHeaders);
+    }
+
+    // === ICS-218 API ENDPOINTS ===
+
+    // ICS-218 password validation
+    if (path === '/api/ics218/validate-password' && request.method === 'POST') {
+      return await handleICS218PasswordValidation(request, env, corsHeaders);
+    }
+
+    // ICS-218 form submission
+    if (path === '/api/ics218/submit' && request.method === 'POST') {
+      return await handleICS218Submit(request, env, corsHeaders);
+    }
+
+    // ICS-218 forms list
+    if (path === '/api/ics218/forms' && request.method === 'GET') {
+      return await handleICS218FormsList(request, env, corsHeaders);
+    }
+
+    // ICS-218 single form retrieval
+    const ics218FormMatch = path.match(/^\/api\/ics218\/forms\/(.+)$/)
+    if (ics218FormMatch && request.method === 'GET') {
+      const formId = ics218FormMatch[1];
+      return await handleICS218FormGet(request, env, corsHeaders, formId);
+    }
+
+    // === NEW: ADMIN DASHBOARD API ENDPOINTS ===
+
+    // Files management endpoints
+    if (path.startsWith('/api/files')) {
+      return await handleFiles(request, env, corsHeaders);
+    }
+
+    // Email system endpoints
+    if (path.startsWith('/api/email')) {
+      return await handleEmail(request, env, corsHeaders);
+    }
+
+    // Enhanced analytics endpoints
+    if (path.startsWith('/api/analytics')) {
+      return await handleAnalytics(request, env, corsHeaders);
+    }
+
+    // Airtable deployment endpoints
+    if (path.startsWith('/api/airtable/deployments') || path.startsWith('/api/airtable/deployment-stats')) {
+      return await handleAirtable(request, env, corsHeaders);
     }
 
     // Route to appropriate handler
@@ -689,7 +803,7 @@ async function invalidateIssuesCache(): Promise<void> {
 function jsonResponse(data: any, options: { status?: number; headers?: Record<string, string> } = {}): Response {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Admin-Password',
     ...options.headers,
@@ -703,7 +817,7 @@ function jsonResponse(data: any, options: { status?: number; headers?: Record<st
 
 function addCorsHeaders(response: Response): Response {
   const newHeaders = new Headers(response.headers);
-  newHeaders.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+  newHeaders.set('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
   newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Admin-Password');
   

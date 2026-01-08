@@ -1,0 +1,23 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Check for updates
+        run: |
+          npm outdated || true
+          cd worker/mbfd-github-proxy
+          npm outdated || true

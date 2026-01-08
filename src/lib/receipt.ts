@@ -3,8 +3,9 @@
  */
 
 import type { InspectionSubmission } from '../types';
+import { WORKER_URL } from './config';
 
-const API_BASE_URL = 'https://mbfd-github-proxy.pdarleyjr.workers.dev/api';
+const API_BASE_URL = `${WORKER_URL}/api`;
 
 export interface ReceiptItem {
   compartment?: string;

@@ -49,3 +49,4 @@ FRONTEND_SPECIALIST_AGENT_PROMPT.md
 # Kilocode configuration (may contain secrets)
 .kilocode/
 .kilocodemodes
+.dev.vars 
