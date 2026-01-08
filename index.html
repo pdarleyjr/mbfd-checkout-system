@@ -2,22 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/mbfd-checkout-system/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="Miami Beach Fire Department Apparatus Checkout System" />
-    <meta name="theme-color" content="#2563eb" />
-    <link rel="manifest" href="/mbfd-checkout-system/manifest.json" />
-    <link rel="apple-touch-icon" href="/mbfd-checkout-system/icon-192.png" />
-    <title>MBFD Checkout System</title>
-    <script type="module" crossorigin src="/mbfd-checkout-system/assets/index-m0iNKoAJ.js"></script>
-    <link rel="stylesheet" crossorigin href="/mbfd-checkout-system/assets/index-BgelQ-oG.css">
+    <meta name="description" content="TASKFORCE IO - Emergency Response Document Management System" />
+    <meta name="theme-color" content="#0066FF" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <title>TASKFORCE IO</title>
+    <script type="module" crossorigin src="/assets/index-O4SU3St8.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-DtipCrYl.js">
+    <link rel="modulepreload" crossorigin href="/assets/ui-CK6awmVK.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CLWT8xjd.css">
   </head>
   <body>
     <div id="root"></div>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/mbfd-checkout-system/sw.js')
+          navigator.serviceWorker.register('/sw.js')
             .then(registration => console.log('SW registered:', registration))
             .catch(error => console.log('SW registration failed:', error));
         });

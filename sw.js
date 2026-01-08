@@ -1,13 +1,14 @@
-const CACHE_NAME = 'mbfd-checkout-v3';
+const CACHE_NAME = 'usar-ics212-v1';
 const urlsToCache = [
-  '/mbfd-checkout-system/',
-  '/mbfd-checkout-system/index.html',
-  '/mbfd-checkout-system/offline.html',
-  '/mbfd-checkout-system/data/rescue_checklist.json',
-  '/mbfd-checkout-system/data/engine_checklist.json',
-  '/mbfd-checkout-system/data/ladder1_checklist.json',
-  '/mbfd-checkout-system/data/ladder3_checklist.json',
-  '/mbfd-checkout-system/data/rope_checklist.json'
+  '/',
+  '/index.html',
+  '/offline.html',
+  '/#/ics212',
+  '/data/rescue_checklist.json',
+  '/data/engine_checklist.json',
+  '/data/ladder1_checklist.json',
+  '/data/ladder3_checklist.json',
+  '/data/rope_checklist.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -38,7 +39,7 @@ self.addEventListener('fetch', (event) => {
           // Offline: serve from cache first, then offline page as fallback
           return caches.match(event.request)
             .then(response => {
-              return response || caches.match('/mbfd-checkout-system/offline.html');
+              return response || caches.match('/offline.html');
             });
         })
     );
