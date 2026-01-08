@@ -15,9 +15,9 @@ import { sendEmailWithPDF } from '../email/gmail';
 import { getPDFFromR2 } from '../storage/r2-client';
 import { nanoid } from 'nanoid';
 
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
+// ============================================================================ 
+// TYPE DEFINITIONS 
+// ============================================================================ 
 
 interface EmailTemplate {
   id: string;
@@ -61,8 +61,8 @@ interface SendEmailRequest {
   templateId?: string;
 }
 
-// ============================================================================
-// MAIN ROUTER
+// ============================================================================ 
+// MAIN ROUTER 
 // ============================================================================
 
 export async function handleEmail(
@@ -127,9 +127,9 @@ export async function handleEmail(
   }
 }
 
-// ============================================================================
-// ENDPOINT HANDLERS
-// ============================================================================
+// ============================================================================ 
+// ENDPOINT HANDLERS 
+// ============================================================================ 
 
 /**
  * POST /api/email/send
@@ -206,7 +206,7 @@ async function handleSendEmail(
           INSERT INTO email_history (
             id, from_email, to_emails, cc_emails, bcc_emails, subject, body,
             attachments, sent_at, status, template_id, form_ids
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         .bind(
           historyId,
@@ -399,7 +399,7 @@ async function handleEmailHistory(
 
     return jsonResponse(
       {
-        history: results.results,
+        emails: results.results, // Changed from "history" to "emails" to match frontend
         total,
         page,
         pages: Math.ceil(total / limit)
@@ -669,9 +669,9 @@ async function handleDeleteTemplate(
   }
 }
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
+// ============================================================================ 
+// HELPER FUNCTIONS 
+// ============================================================================ 
 
 function jsonResponse(
   data: any,

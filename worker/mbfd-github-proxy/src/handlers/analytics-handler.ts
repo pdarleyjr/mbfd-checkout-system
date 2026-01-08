@@ -38,8 +38,8 @@ interface AnalyticsResponse {
   }>;
   
   // Trends
-  formsPerDay: Array<{ date: string; count: number }>;
-  topVehicles: Array<{ vehicleId: string; count: number; lastInspection: string }>;
+  formsPerDay: Array<{ date: string; count: number }>;  
+  topVehicles: Array<{ vehicleId: string; count: number; lastInspection: string }>; 
   safetyItemFailures: Array<{ item: string; count: number }>;  
   
   // Recent activity
@@ -244,25 +244,60 @@ async function handleAdvancedAnalytics(
 
     // ===== BUILD RESPONSE =====
 
-    const response: AnalyticsResponse = {
-      totalForms,
-      formsThisMonth,
-      formsThisWeek,
-      holdRate: totalForms > 0 ? (holdCount / totalForms) * 100 : 0,
-      releaseRate: totalForms > 0 ? ((totalForms - holdCount) / totalForms) * 100 : 0,
-      
-      totalVehicles,
-      vehiclesByStatus,
-      vehiclesByType,
-      deploymentHistory,
-      
-      topVehicles: topVehicles.results as any[],
-      safetyItemFailures: Object.entries(failureCounts)
-        .map(([item, count]) => ({ item, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10),
-      formsPerDay: formsPerDay.results as any[],
-      recentForms: recentForms.results as any[]
+    // Transform vehiclesByStatus into array format for charts
+    const vehicleStatusData = Object.entries(vehiclesByStatus).map(([status, count]) => ({
+      status,
+      count
+    }));
+    
+    // Transform formsPerDay for submission trend
+    const submissionTrend = (formsPerDay.results as any[]).map((row: any) => ({
+      date: row.date,
+      submissions: row.count
+    }));
+    
+    // Transform form type distribution (currently only ICS-212, but structure for future)
+    const formTypeDistribution = [
+      {
+        formType: 'ICS-212',
+        count: totalForms,
+        percentage: 100
+      }
+    ];
+    
+    // Transform recent forms into recentSubmissions
+    const recentSubmissions = (recentForms.results as any[]).map((form: any) => ({
+      id: form.form_id,
+      formType: 'ICS-212',
+      vehicle: form.vehicle_id_no,
+      date: form.created_at,
+      status: form.release_decision === 'hold' ? 'Hold' : 
+              form.release_decision === 'released' ? 'Released' : 'Pending'
+    }));
+    
+    // Transform safety failures to match expected format
+    const transformedSafetyFailures = Object.entries(failureCounts)
+      .map(([item, count]) => ({ item, failureCount: count }))
+      .sort((a, b) => b.failureCount - a.failureCount)
+      .slice(0, 10);
+
+    // Build response matching frontend's expected structure
+    const response = {
+      statistics: {
+        totalSubmissions: totalForms,
+        totalSubmissionsTrend: 0, // TODO: Calculate trend vs previous period
+        completionRate: totalForms > 0 ? ((totalForms - 0) / totalForms) * 100 : 0,
+        completionRateTrend: 0, // TODO: Calculate trend
+        pendingForms: 0, // TODO: Count forms without PDF or incomplete
+        releasedVehicles: totalForms - holdCount,
+        holdVehicles: holdCount,
+        averageCompletionTime: 15 // TODO: Calculate actual completion time
+      },
+      submissionTrend,
+      formTypeDistribution,
+      vehicleStatusData,
+      safetyItemFailures: transformedSafetyFailures,
+      recentSubmissions
     };
 
     return jsonResponse(response, { status: 200, headers: corsHeaders });

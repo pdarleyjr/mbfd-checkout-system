@@ -37,7 +37,7 @@ interface FileMetadata {
 }
 
 interface FilesListResponse {
-  files: FileMetadata[];
+  files: any[];
   total: number;
   page: number;
   pages: number;
@@ -214,8 +214,20 @@ async function handleFilesList(
   const allFiles = [...(results.results as unknown as FileMetadata[]), ...(formPDFs.results as unknown as FileMetadata[])];
   total += (formPDFs.results?.length || 0);
 
+  // Transform to camelCase for frontend
+  const transformedFiles = allFiles.slice((page - 1) * limit, page * limit).map((file: any) => ({
+    id: file.id,
+    filename: file.original_filename || file.filename,
+    fileType: file.file_type?.toUpperCase() || 'UNKNOWN',
+    size: file.file_size || 0,
+    uploader: file.uploader_name || file.uploader || 'Unknown',
+    uploadDate: file.upload_date,
+    associatedForm: file.form_id || file.form_type || '-',
+    url: file.storage_url
+  }));
+
   const response: FilesListResponse = {
-    files: allFiles.slice((page - 1) * limit, page * limit),
+    files: transformedFiles,
     total,
     page,
     pages: Math.ceil(total / limit)
