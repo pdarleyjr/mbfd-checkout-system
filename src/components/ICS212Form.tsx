@@ -131,8 +131,12 @@ export const ICS212Form: React.FC = () => {
         break;
 
       case 1: // Vehicle Selection
-        if (!formData.vehicleIdNo) {
-          newErrors.vehicleIdNo = 'Vehicle ID is required';
+        // Check if vehicle information is present (any of the key fields)
+        const hasVehicleInfo = formData.vehicleIdNo || formData.vehicleType || 
+                               formData.vehicleLicenseNo || formData.agencyRegUnit;
+        
+        if (!hasVehicleInfo) {
+          newErrors.vehicleIdNo = 'Please select or enter vehicle information';
         }
         if (!formData.odometerReading || formData.odometerReading === 0) {
           newErrors.odometerReading = 'Odometer reading is required';
