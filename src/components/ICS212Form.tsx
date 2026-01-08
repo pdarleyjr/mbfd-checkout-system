@@ -28,6 +28,7 @@ const INITIAL_FORM_DATA: Partial<ICS212FormData> = {
   vehicleLicenseNo: '',
   agencyRegUnit: '',
   vehicleType: '',
+  selectedVehicleId: '',
   odometerReading: 0,
   inspectionItems: [],
   additionalComments: '',
@@ -131,9 +132,11 @@ export const ICS212Form: React.FC = () => {
         break;
 
       case 1: // Vehicle Selection
-        // Check if vehicle information is present (any of the key fields)
-        const hasVehicleInfo = formData.vehicleIdNo || formData.vehicleType || 
+        // Check if vehicle is selected from Airtable OR manual fields are populated
+        const hasAirtableVehicle = formData.selectedVehicleId;
+        const hasManualVehicleInfo = formData.vehicleIdNo || formData.vehicleType || 
                                formData.vehicleLicenseNo || formData.agencyRegUnit;
+        const hasVehicleInfo = hasAirtableVehicle || hasManualVehicleInfo;
         
         if (!hasVehicleInfo) {
           newErrors.vehicleIdNo = 'Please select or enter vehicle information';

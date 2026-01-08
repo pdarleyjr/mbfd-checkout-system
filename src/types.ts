@@ -267,6 +267,7 @@ export interface ICS212FormData {
   vehicleType: string;
   odometerReading: number;
   vehicleIdNo: string;
+  selectedVehicleId?: string; // Track when a vehicle from Airtable is selected
   
   // Inspection Items (Section 2)
   inspectionItems: InspectionItem[];

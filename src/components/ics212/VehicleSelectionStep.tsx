@@ -27,7 +27,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
   const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
+  
   // Fetch vehicles on mount
   useEffect(() => {
     fetchVehicles();
@@ -52,6 +52,7 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
     if (!vehicleId) {
       // Clear selection
       setSelectedVehicle(null);
+      onChange('selectedVehicleId', '');
       onChange('vehicleIdNo', '');
       onChange('vehicleLicenseNo', '');
       onChange('vehicleType', '');
@@ -68,6 +69,10 @@ export const VehicleSelectionStep: React.FC<VehicleSelectionStepProps> = ({
     const vehicle = vehicles.find(v => v.id === vehicleId);
     if (vehicle) {
       setSelectedVehicle(vehicle);
+      
+      // Store the Airtable vehicle ID to track that a vehicle was selected
+      onChange('selectedVehicleId', vehicle.id);
+      
       // Auto-populate vehicle fields
       onChange('vehicleIdNo', vehicle.vehicleId || '');
       onChange('vehicleLicenseNo', vehicle.licenseNumber || '');
